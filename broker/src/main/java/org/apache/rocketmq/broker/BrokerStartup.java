@@ -102,13 +102,13 @@ public class BrokerStartup {
             //PackageConflictDetect.detectFastjson();
             Options options = ServerUtil.buildCommandlineOptions(new Options());
             //      没有属性配置文件、不打印配置内容和引入的配置内容
-            Options options1 = buildCommandlineOptions(options);
+            options = buildCommandlineOptions(options);
             // note 的意思是启动mq的broker
 
             commandLine = ServerUtil.parseCmdLine(
                     "mqbroker",
                     args,
-
+                    options,
                     new PosixParser()
             );
 
