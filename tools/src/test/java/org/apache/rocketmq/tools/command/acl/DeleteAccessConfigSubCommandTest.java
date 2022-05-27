@@ -29,7 +29,8 @@ public class DeleteAccessConfigSubCommandTest {
     @Test
     public void testExecute() {
         DeleteAccessConfigSubCommand cmd = new DeleteAccessConfigSubCommand();
-        Options options = ServerUtil.buildCommandlineOptions(new Options());
+        Options options = new Options();
+        ServerUtil.configCommandlineOptions(options);
         String[] subargs = new String[] {"-a unit-test", "-c default-cluster"};
         final CommandLine commandLine =
             ServerUtil.parseCmdLine("mqadmin " + cmd.commandName(), subargs, cmd.buildCommandlineOptions(options), new PosixParser());

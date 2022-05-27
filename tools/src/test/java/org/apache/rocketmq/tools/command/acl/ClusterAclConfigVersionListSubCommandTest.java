@@ -29,7 +29,8 @@ public class ClusterAclConfigVersionListSubCommandTest {
     @Test
     public void testExecute() {
         ClusterAclConfigVersionListSubCommand cmd = new ClusterAclConfigVersionListSubCommand();
-        Options options = ServerUtil.buildCommandlineOptions(new Options());
+        Options options = new Options();
+        ServerUtil.configCommandlineOptions(options);
         String[] subargs = new String[] {"-c default-cluster"};
         final CommandLine commandLine =
             ServerUtil.parseCmdLine("mqadmin " + cmd.commandName(), subargs, cmd.buildCommandlineOptions(options), new PosixParser());

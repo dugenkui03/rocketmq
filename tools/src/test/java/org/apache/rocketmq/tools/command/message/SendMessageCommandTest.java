@@ -75,7 +75,8 @@ public class SendMessageCommandTest {
         PrintStream out = System.out;
         ByteArrayOutputStream bos = new ByteArrayOutputStream();
         System.setOut(new PrintStream(bos));
-        Options options = ServerUtil.buildCommandlineOptions(new Options());
+        Options options = new Options();
+        ServerUtil.configCommandlineOptions(options);
         String[] subargs = new String[] {"-t mytopic","-p 'send message test'","-c tagA","-k order-16546745756"};
         CommandLine commandLine = ServerUtil.parseCmdLine("mqadmin " + sendMessageCommand.commandName(), subargs, sendMessageCommand.buildCommandlineOptions(options), new PosixParser());
         sendMessageCommand.execute(commandLine, options, null);

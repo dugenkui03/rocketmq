@@ -51,7 +51,8 @@ public class GetNamesrvConfigCommandTest {
     @Test
     public void testExecute() throws Exception {
         GetNamesrvConfigCommand cmd = new GetNamesrvConfigCommand();
-        Options options = ServerUtil.buildCommandlineOptions(new Options());
+        Options options = new Options();
+        ServerUtil.configCommandlineOptions(options);
         String[] subargs = new String[] {};
         final CommandLine commandLine =
             ServerUtil.parseCmdLine("mqadmin " + cmd.commandName(), subargs, cmd.buildCommandlineOptions(options), new PosixParser());

@@ -62,7 +62,8 @@ public class GetConsumerConfigSubCommandTest {
     @Test
     public void testExecute() throws SubCommandException {
         GetConsumerConfigSubCommand cmd = new GetConsumerConfigSubCommand();
-        Options options = ServerUtil.buildCommandlineOptions(new Options());
+        Options options = new Options();
+        ServerUtil.configCommandlineOptions(options);
         String[] subargs = new String[] {"-g group_test"};
         final CommandLine commandLine =
             ServerUtil.parseCmdLine("mqadmin " + cmd.commandName(), subargs, cmd.buildCommandlineOptions(options), new PosixParser());

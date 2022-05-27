@@ -27,7 +27,8 @@ public class GetAccessConfigSubCommandTest {
     @Test
     public void testExecute() {
         GetAccessConfigSubCommand cmd = new GetAccessConfigSubCommand();
-        Options options = ServerUtil.buildCommandlineOptions(new Options());
+        Options options = new Options();
+        ServerUtil.configCommandlineOptions(options);
         String[] subargs = new String[] {"-c default-cluster"};
         final CommandLine commandLine =
                 ServerUtil.parseCmdLine("mqadmin " + cmd.commandName(), subargs, cmd.buildCommandlineOptions(options), new PosixParser());

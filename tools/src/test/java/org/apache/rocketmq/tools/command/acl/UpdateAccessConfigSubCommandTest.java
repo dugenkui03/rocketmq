@@ -33,7 +33,8 @@ public class UpdateAccessConfigSubCommandTest {
     @Test
     public void testExecute() {
         UpdateAccessConfigSubCommand cmd = new UpdateAccessConfigSubCommand();
-        Options options = ServerUtil.buildCommandlineOptions(new Options());
+        Options options = new Options();
+        ServerUtil.configCommandlineOptions(options);
         String[] subargs = new String[] {
             "-b 127.0.0.1:10911",
             "-a RocketMQ",

@@ -28,7 +28,8 @@ public class UpdateTopicSubCommandTest {
     @Test
     public void testExecute() {
         UpdateTopicSubCommand cmd = new UpdateTopicSubCommand();
-        Options options = ServerUtil.buildCommandlineOptions(new Options());
+        Options options = new Options();
+        ServerUtil.configCommandlineOptions(options);
         String[] subargs = new String[] {
             "-b 127.0.0.1:10911",
             "-t unit-test",

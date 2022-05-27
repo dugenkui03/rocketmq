@@ -56,7 +56,8 @@ public class GetBrokerConfigCommandTest extends ServerResponseMocker {
     @Test
     public void testExecute() throws SubCommandException {
         GetBrokerConfigCommand cmd = new GetBrokerConfigCommand();
-        Options options = ServerUtil.buildCommandlineOptions(new Options());
+        Options options = new Options();
+        ServerUtil.configCommandlineOptions(options);
         String[] subargs = new String[] {"-b 127.0.0.1:" + PORT, "-c default-cluster"};
         final CommandLine commandLine =
             ServerUtil.parseCmdLine("mqadmin " + cmd.commandName(), subargs, cmd.buildCommandlineOptions(options), new PosixParser());

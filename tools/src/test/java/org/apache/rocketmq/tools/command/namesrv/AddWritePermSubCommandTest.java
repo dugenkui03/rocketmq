@@ -54,7 +54,8 @@ public class AddWritePermSubCommandTest {
     @Test
     public void testExecute() throws SubCommandException {
         AddWritePermSubCommand cmd = new AddWritePermSubCommand();
-        Options options = ServerUtil.buildCommandlineOptions(new Options());
+        Options options = new Options();
+        ServerUtil.configCommandlineOptions(options);
         String[] subargs = new String[]{"-b default-broker"};
         final CommandLine commandLine =
                 ServerUtil.parseCmdLine("mqadmin " + cmd.commandName(), subargs, cmd.buildCommandlineOptions(options), new PosixParser());

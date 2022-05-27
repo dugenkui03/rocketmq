@@ -69,7 +69,8 @@ public class SendMsgStatusCommandTest {
     @Test
     public void testExecute() {
         SendMsgStatusCommand cmd = new SendMsgStatusCommand();
-        Options options = ServerUtil.buildCommandlineOptions(new Options());
+        Options options = new Options();
+        ServerUtil.configCommandlineOptions(options);
         String[] subargs = new String[] {"-b 127.0.0.1:10911", "-s 1024 -c 10"};
         final CommandLine commandLine =
             ServerUtil.parseCmdLine("mqadmin " + cmd.commandName(), subargs, cmd.buildCommandlineOptions(options), new PosixParser());

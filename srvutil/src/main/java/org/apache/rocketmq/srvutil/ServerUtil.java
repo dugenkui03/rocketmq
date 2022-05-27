@@ -26,7 +26,7 @@ import org.apache.commons.cli.ParseException;
 
 public class ServerUtil {
 
-    public static Options buildCommandlineOptions(final Options options) {
+    public static void configCommandlineOptions(Options options) {
         Option opt = new Option("h", "help", false, "Print help");
         opt.setRequired(false);
         options.addOption(opt);
@@ -36,8 +36,6 @@ public class ServerUtil {
                 "Name server address list, eg: '192.168.0.1:9876;192.168.0.2:9876'");
         opt.setRequired(false);
         options.addOption(opt);
-
-        return options;
     }
 
     public static CommandLine parseCmdLine(final String appName, String[] args, Options options,

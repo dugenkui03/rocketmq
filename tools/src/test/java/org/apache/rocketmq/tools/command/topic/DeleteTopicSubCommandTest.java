@@ -28,7 +28,8 @@ public class DeleteTopicSubCommandTest {
     @Test
     public void testExecute() {
         DeleteTopicSubCommand cmd = new DeleteTopicSubCommand();
-        Options options = ServerUtil.buildCommandlineOptions(new Options());
+        Options options = new Options();
+        ServerUtil.configCommandlineOptions(options);
         String[] subargs = new String[] {"-t unit-test", "-c default-cluster"};
         final CommandLine commandLine =
             ServerUtil.parseCmdLine("mqadmin " + cmd.commandName(), subargs, cmd.buildCommandlineOptions(options), new PosixParser());

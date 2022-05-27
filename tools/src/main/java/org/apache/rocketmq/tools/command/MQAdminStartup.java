@@ -115,7 +115,8 @@ public class MQAdminStartup {
                     if (args[0].equals("help")) {
                         SubCommand cmd = findSubCommand(args[1]);
                         if (cmd != null) {
-                            Options options = ServerUtil.buildCommandlineOptions(new Options());
+                            Options options = new Options();
+                            ServerUtil.configCommandlineOptions(options);
                             options = cmd.buildCommandlineOptions(options);
                             if (options != null) {
                                 ServerUtil.printCommandLineHelp("mqadmin " + cmd.commandName(), options);
@@ -131,7 +132,8 @@ public class MQAdminStartup {
                     if (cmd != null) {
                         String[] subargs = parseSubArgs(args);
 
-                        Options options = ServerUtil.buildCommandlineOptions(new Options());
+                        Options options = new Options();
+                        ServerUtil.configCommandlineOptions(options);
                         final CommandLine commandLine =
                             ServerUtil.parseCmdLine("mqadmin " + cmd.commandName(), subargs, cmd.buildCommandlineOptions(options),
                                 new PosixParser());

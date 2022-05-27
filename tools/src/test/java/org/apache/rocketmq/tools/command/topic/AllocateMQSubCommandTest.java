@@ -28,7 +28,8 @@ public class AllocateMQSubCommandTest {
     @Test
     public void testExecute() {
         AllocateMQSubCommand cmd = new AllocateMQSubCommand();
-        Options options = ServerUtil.buildCommandlineOptions(new Options());
+        Options options = new Options();
+        ServerUtil.configCommandlineOptions(options);
         String[] subargs = new String[] {"-t unit-test", "-i 127.0.0.1:10911"};
         final CommandLine commandLine =
             ServerUtil.parseCmdLine("mqadmin " + cmd.commandName(), subargs, cmd.buildCommandlineOptions(options), new PosixParser());

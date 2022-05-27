@@ -28,7 +28,8 @@ public class ResetOffsetByTimeOldCommandTest {
     @Test
     public void testExecute() {
         ResetOffsetByTimeOldCommand cmd = new ResetOffsetByTimeOldCommand();
-        Options options = ServerUtil.buildCommandlineOptions(new Options());
+        Options options = new Options();
+        ServerUtil.configCommandlineOptions(options);
         String[] subargs = new String[] {"-g default-group", "-t unit-test", "-s 1412131213231", "-f false"};
         final CommandLine commandLine =
             ServerUtil.parseCmdLine("mqadmin " + cmd.commandName(), subargs, cmd.buildCommandlineOptions(options), new PosixParser());

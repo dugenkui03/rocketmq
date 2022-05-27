@@ -91,8 +91,10 @@ public class BrokerStartup {
 
         try {
             //PackageConflictDetect.detectFastjson();
-            Options options = ServerUtil.buildCommandlineOptions(new Options());
-            commandLine = ServerUtil.parseCmdLine("mqbroker", args, buildCommandlineOptions(options),
+            Options options = new Options();
+            ServerUtil.configCommandlineOptions(options);
+            BrokerStartup.configCommandlineOptions(options);
+            commandLine = ServerUtil.parseCmdLine("mqbroker", args, options,
                 new PosixParser());
             if (null == commandLine) {
                 System.exit(-1);
@@ -261,7 +263,7 @@ public class BrokerStartup {
         System.setProperty("rocketmq.namesrv.domain.subgroup", rmqAddressServerSubGroup);
     }
 
-    private static Options buildCommandlineOptions(final Options options) {
+    private static void configCommandlineOptions(Options options) {
         Option opt = new Option("c", "configFile", true, "Broker config properties file");
         opt.setRequired(false);
         options.addOption(opt);
@@ -273,7 +275,5 @@ public class BrokerStartup {
         opt = new Option("m", "printImportantConfig", false, "Print important config item");
         opt.setRequired(false);
         options.addOption(opt);
-
-        return options;
     }
 }

@@ -53,7 +53,8 @@ public class GetConsumerStatusCommandTest {
     @Test
     public void testExecute() throws SubCommandException {
         GetConsumerStatusCommand cmd = new GetConsumerStatusCommand();
-        Options options = ServerUtil.buildCommandlineOptions(new Options());
+        Options options = new Options();
+        ServerUtil.configCommandlineOptions(options);
         String[] subargs = new String[] {"-g default-group", "-t unit-test", "-i clientid"};
         final CommandLine commandLine =
             ServerUtil.parseCmdLine("mqadmin " + cmd.commandName(), subargs, cmd.buildCommandlineOptions(options), new PosixParser());

@@ -28,7 +28,8 @@ public class TopicStatusSubCommandTest {
     @Test
     public void testExecute() {
         TopicStatusSubCommand cmd = new TopicStatusSubCommand();
-        Options options = ServerUtil.buildCommandlineOptions(new Options());
+        Options options = new Options();
+        ServerUtil.configCommandlineOptions(options);
         String[] subargs = new String[] {"-t unit-test"};
         final CommandLine commandLine =
             ServerUtil.parseCmdLine("mqadmin " + cmd.commandName(), subargs, cmd.buildCommandlineOptions(options), new PosixParser());

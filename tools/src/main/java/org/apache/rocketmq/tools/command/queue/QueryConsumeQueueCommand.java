@@ -35,7 +35,8 @@ public class QueryConsumeQueueCommand implements SubCommand {
     public static void main(String[] args) {
         QueryConsumeQueueCommand cmd = new QueryConsumeQueueCommand();
 
-        Options options = ServerUtil.buildCommandlineOptions(new Options());
+        Options options = new Options();
+        ServerUtil.configCommandlineOptions(options);
         String[] subargs = new String[] {"-t TopicTest", "-q 0", "-i 6447", "-b 100.81.165.119:10911"};
         final CommandLine commandLine =
             ServerUtil.parseCmdLine("mqadmin " + cmd.commandName(), subargs, cmd.buildCommandlineOptions(options),
