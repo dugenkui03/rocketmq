@@ -53,8 +53,12 @@ public class BrokerStartup {
     public static String configFile = null;
     public static InternalLogger log;
 
+    /**
+     * note broker 启动入口
+     */
     public static void main(String[] args) {
-        start(createBrokerController(args));
+        BrokerController brokerController = createBrokerController(args);
+        start(brokerController);
     }
 
     public static BrokerController start(BrokerController controller) {
@@ -86,14 +90,28 @@ public class BrokerStartup {
         }
     }
 
+    /**
+     * @param args note main 方法参数
+     */
     public static BrokerController createBrokerController(String[] args) {
+        // rocketmq.remoting.version, 0 开始的下标
         System.setProperty(RemotingCommand.REMOTING_VERSION_KEY, Integer.toString(MQVersion.CURRENT_VERSION));
 
         try {
+            // note 运行命令行
             //PackageConflictDetect.detectFastjson();
             Options options = ServerUtil.buildCommandlineOptions(new Options());
-            commandLine = ServerUtil.parseCmdLine("mqbroker", args, buildCommandlineOptions(options),
-                new PosixParser());
+            //      没有属性配置文件、不打印配置内容和引入的配置内容
+            Options options1 = buildCommandlineOptions(options);
+            // note 的意思是启动mq的broker
+
+            commandLine = ServerUtil.parseCmdLine(
+                    "mqbroker",
+                    args,
+
+                    new PosixParser()
+            );
+
             if (null == commandLine) {
                 System.exit(-1);
             }
@@ -261,15 +279,21 @@ public class BrokerStartup {
         System.setProperty("rocketmq.namesrv.domain.subgroup", rmqAddressServerSubGroup);
     }
 
+    /**
+     * @return 没有属性配置文件、不打印配置内容和引入的配置内容
+     */
     private static Options buildCommandlineOptions(final Options options) {
+        // note 属性配置文件
         Option opt = new Option("c", "configFile", true, "Broker config properties file");
         opt.setRequired(false);
         options.addOption(opt);
 
+        // note 打印所有的配置内容
         opt = new Option("p", "printConfigItem", false, "Print all config item");
         opt.setRequired(false);
         options.addOption(opt);
 
+        // note 打印 import 的配置内容
         opt = new Option("m", "printImportantConfig", false, "Print important config item");
         opt.setRequired(false);
         options.addOption(opt);

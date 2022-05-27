@@ -21,6 +21,9 @@ import java.io.File;
 import org.apache.rocketmq.common.annotation.ImportantField;
 import org.apache.rocketmq.store.ConsumeQueue;
 
+/**
+ * https://blog.51cto.com/u_15127701/2872820
+ */
 public class MessageStoreConfig {
 
     public static final String MULTI_PATH_SPLITTER = System.getProperty("rocketmq.broker.multiPathSplitter", ",");

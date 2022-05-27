@@ -18,6 +18,10 @@ package org.apache.rocketmq.common;
 
 public class MQVersion {
 
+    // FIXME Most programmers will have no use for this method.
+    //  It is designed for use by sophisticated enum-based data structures,
+    //  such as java.util.EnumSet and java.util.EnumMap.
+    //  一般基于枚举的数据结构才使用该方法，业务判断不应该直接使用
     public static final int CURRENT_VERSION = Version.V4_9_3.ordinal();
 
     public static String getVersionDesc(int value) {
@@ -29,8 +33,10 @@ public class MQVersion {
         return Version.values()[value].name();
     }
 
+    // 根据下标获取版本号
     public static Version value2Version(int value) {
         int length = Version.values().length;
+        // 如果传入的值太大了，就使用最大版本号
         if (value >= length) {
             return Version.values()[length - 1];
         }
