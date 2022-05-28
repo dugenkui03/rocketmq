@@ -316,6 +316,7 @@ public class MixAll {
         return properties;
     }
 
+    // 将属性信息设置到 object 中
     public static void properties2Object(final Properties p, final Object object) {
         Method[] methods = object.getClass().getMethods();
         for (Method method : methods) {

@@ -40,6 +40,7 @@ public class ServerUtil {
         return options;
     }
 
+    // 创建命令行工具
     public static CommandLine parseCmdLine(final String appName, String[] args, Options options,
         CommandLineParser parser) {
         HelpFormatter hf = new HelpFormatter();
@@ -65,6 +66,9 @@ public class ServerUtil {
         hf.printHelp(appName, options, true);
     }
 
+    /**
+     * 将 CommandLine 转换为 Properties 对象
+     */
     public static Properties commandLine2Properties(final CommandLine commandLine) {
         Properties properties = new Properties();
         Option[] opts = commandLine.getOptions();

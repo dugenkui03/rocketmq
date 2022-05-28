@@ -112,24 +112,29 @@ public class BrokerStartup {
                     new PosixParser()
             );
 
+            // 创建命令行工具失败则退出
             if (null == commandLine) {
                 System.exit(-1);
             }
 
-            final BrokerConfig brokerConfig = new BrokerConfig();
-            final NettyServerConfig nettyServerConfig = new NettyServerConfig();
+            // note netty的客户端和server端配置类
             final NettyClientConfig nettyClientConfig = new NettyClientConfig();
-
+            final NettyServerConfig nettyServerConfig = new NettyServerConfig();
             nettyClientConfig.setUseTLS(Boolean.parseBoolean(System.getProperty(TLS_ENABLE,
                 String.valueOf(TlsSystemConfig.tlsMode == TlsMode.ENFORCING))));
             nettyServerConfig.setListenPort(10911);
-            final MessageStoreConfig messageStoreConfig = new MessageStoreConfig();
 
+            // note 消息存储配置类
+            // https://shimo.im/docs/KlkKVpMVjaioW9qd mappedFileSizeCommitLog
+            final MessageStoreConfig messageStoreConfig = new MessageStoreConfig();
             if (BrokerRole.SLAVE == messageStoreConfig.getBrokerRole()) {
                 int ratio = messageStoreConfig.getAccessMessageInMemoryMaxRatio() - 10;
                 messageStoreConfig.setAccessMessageInMemoryMaxRatio(ratio);
             }
 
+            // note broker配置类
+            final BrokerConfig brokerConfig = new BrokerConfig();
+            // c 表示 Broker config properties file，默认为false
             if (commandLine.hasOption('c')) {
                 String file = commandLine.getOptionValue('c');
                 if (file != null) {
