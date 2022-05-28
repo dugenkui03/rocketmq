@@ -318,18 +318,23 @@ public class MixAll {
 
     // 将属性信息设置到 object 中
     public static void properties2Object(final Properties p, final Object object) {
+        // 获取对象所有的方法并遍历
         Method[] methods = object.getClass().getMethods();
         for (Method method : methods) {
+            // 只处理命名以 set 开始的方法
             String mn = method.getName();
             if (mn.startsWith("set")) {
                 try {
+                    // note 获取要设置的属性名称，包括在p中的值
                     String tmp = mn.substring(4);
                     String first = mn.substring(3, 4);
-
                     String key = first.toLowerCase() + tmp;
                     String property = p.getProperty(key);
+
+
                     if (property != null) {
                         Class<?>[] pt = method.getParameterTypes();
+
                         if (pt != null && pt.length > 0) {
                             String cn = pt[0].getSimpleName();
                             Object arg = null;
