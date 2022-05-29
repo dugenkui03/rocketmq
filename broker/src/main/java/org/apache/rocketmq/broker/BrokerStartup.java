@@ -156,16 +156,21 @@ public class BrokerStartup {
 
             MixAll.properties2Object(ServerUtil.commandLine2Properties(commandLine), brokerConfig);
 
+            // note 没有设置环境变量 ROCKETMQ_HOME
             if (null == brokerConfig.getRocketmqHome()) {
                 System.out.printf("Please set the %s variable in your environment to match the location of the RocketMQ installation", MixAll.ROCKETMQ_HOME_ENV);
                 System.exit(-2);
             }
 
+            // 获取命名服务地址，可能为null
             String namesrvAddr = brokerConfig.getNamesrvAddr();
+            // note 其中的逻辑是校验数据正确性
             if (null != namesrvAddr) {
                 try {
+                    // 可能有多个
                     String[] addrArray = namesrvAddr.split(";");
                     for (String addr : addrArray) {
+                        // 能成功解析则表示校验通过
                         RemotingUtil.string2SocketAddress(addr);
                     }
                 } catch (Exception e) {
@@ -176,31 +181,38 @@ public class BrokerStartup {
                 }
             }
 
+            // 异步master、同步master和slave
             switch (messageStoreConfig.getBrokerRole()) {
+                // 如果是master、则将brokerId设置为 masterId
                 case ASYNC_MASTER:
                 case SYNC_MASTER:
                     brokerConfig.setBrokerId(MixAll.MASTER_ID);
                     break;
                 case SLAVE:
+                    // 默认是masterId、即0
                     if (brokerConfig.getBrokerId() <= 0) {
                         System.out.printf("Slave's brokerId must be > 0");
                         System.exit(-3);
                     }
-
                     break;
                 default:
                     break;
             }
 
+            // note 默认为false，为true的时候会改变 brokerId
             if (messageStoreConfig.isEnableDLegerCommitLog()) {
                 brokerConfig.setBrokerId(-1);
             }
 
+            // note 设置端口号
+            // todo 为啥要 +1
             messageStoreConfig.setHaListenPort(nettyServerConfig.getListenPort() + 1);
             LoggerContext lc = (LoggerContext) LoggerFactory.getILoggerFactory();
             JoranConfigurator configurator = new JoranConfigurator();
-            configurator.setContext(lc);
+            configurator.setContext(lc); // 使用的是 reset 之后的数据
             lc.reset();
+
+            // 设置系统属性
             System.setProperty("brokerLogDir", "");
             if (brokerConfig.isIsolateLogEnable()) {
                 System.setProperty("brokerLogDir", brokerConfig.getBrokerName() + "_" + brokerConfig.getBrokerId());
@@ -208,8 +220,10 @@ public class BrokerStartup {
             if (brokerConfig.isIsolateLogEnable() && messageStoreConfig.isEnableDLegerCommitLog()) {
                 System.setProperty("brokerLogDir", brokerConfig.getBrokerName() + "_" + messageStoreConfig.getdLegerSelfId());
             }
+            // 设置 broker 的日志？
             configurator.doConfigure(brokerConfig.getRocketmqHome() + "/conf/logback_broker.xml");
 
+            // 选项有 p 或者 m 则退出
             if (commandLine.hasOption('p')) {
                 InternalLogger console = InternalLoggerFactory.getLogger(LoggerName.BROKER_CONSOLE_NAME);
                 MixAll.printObjectProperties(console, brokerConfig);
@@ -232,11 +246,19 @@ public class BrokerStartup {
             MixAll.printObjectProperties(log, nettyClientConfig);
             MixAll.printObjectProperties(log, messageStoreConfig);
 
+            /**
+             * 1. 使用配置创建 controller
+             * 2. 初始化 controller
+             */
+
+            // note result
             final BrokerController controller = new BrokerController(
-                brokerConfig,
-                nettyServerConfig,
-                nettyClientConfig,
-                messageStoreConfig);
+                    brokerConfig,
+                    nettyServerConfig,
+                    nettyClientConfig,
+                    messageStoreConfig
+            );
+            // note 记住所有的配置防止丢弃
             // remember all configs to prevent discard
             controller.getConfiguration().registerConfig(properties);
 
@@ -246,6 +268,7 @@ public class BrokerStartup {
                 System.exit(-3);
             }
 
+            // 程序关闭钩子方法
             Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
                 private volatile boolean hasShutdown = false;
                 private AtomicInteger shutdownTimes = new AtomicInteger(0);

@@ -32,9 +32,17 @@ import org.apache.rocketmq.remoting.common.RemotingUtil;
 public class BrokerConfig {
     private static final InternalLogger log = InternalLoggerFactory.getLogger(LoggerName.COMMON_LOGGER_NAME);
 
-    private String rocketmqHome = System.getProperty(MixAll.ROCKETMQ_HOME_PROPERTY, System.getenv(MixAll.ROCKETMQ_HOME_ENV));
+    private String rocketmqHome = System.getProperty(
+            MixAll.ROCKETMQ_HOME_PROPERTY, // key：rocketmq.home.dir
+            System.getenv(MixAll.ROCKETMQ_HOME_ENV)// default value
+    );
+
     @ImportantField
-    private String namesrvAddr = System.getProperty(MixAll.NAMESRV_ADDR_PROPERTY, System.getenv(MixAll.NAMESRV_ADDR_ENV));
+    private String namesrvAddr = System.getProperty(
+            MixAll.NAMESRV_ADDR_PROPERTY, // rocketmq.namesrv.addr 命名服务地址
+            System.getenv(MixAll.NAMESRV_ADDR_ENV)
+    );
+
     @ImportantField
     private String brokerIP1 = RemotingUtil.getLocalAddress();
     private String brokerIP2 = RemotingUtil.getLocalAddress();

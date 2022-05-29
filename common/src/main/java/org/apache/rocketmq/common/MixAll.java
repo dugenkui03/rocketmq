@@ -233,16 +233,24 @@ public class MixAll {
         printObjectProperties(logger, object, false);
     }
 
-    public static void printObjectProperties(final InternalLogger logger, final Object object,
-        final boolean onlyImportantField) {
+
+    public static void printObjectProperties(final InternalLogger logger,
+                                             final Object object,
+                                             final boolean onlyImportantField // 是否只打印 ImportantField 注解的字段
+    ) {
+        // 获取对象的字段信息
         Field[] fields = object.getClass().getDeclaredFields();
+        // 遍历所有的字段
         for (Field field : fields) {
+            // note 获取字段的修饰器、并且判断是否是静态类型、不是则进入
             if (!Modifier.isStatic(field.getModifiers())) {
                 String name = field.getName();
+                // 如果字段名称不是以 this 开始的
                 if (!name.startsWith("this")) {
                     Object value = null;
                     try {
                         field.setAccessible(true);
+                        // 获取字段值
                         value = field.get(object);
                         if (null == value) {
                             value = "";
