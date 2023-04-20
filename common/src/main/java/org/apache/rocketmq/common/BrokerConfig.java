@@ -23,11 +23,15 @@ import org.apache.rocketmq.common.message.MessageRequestMode;
 import org.apache.rocketmq.common.topic.TopicValidator;
 import org.apache.rocketmq.common.utils.NetworkUtil;
 
+/**
+ * broker 配置
+ */
 public class BrokerConfig extends BrokerIdentity {
 
     private String brokerConfigPath = null;
 
     private String rocketmqHome = System.getProperty(MixAll.ROCKETMQ_HOME_PROPERTY, System.getenv(MixAll.ROCKETMQ_HOME_ENV));
+
     @ImportantField
     private String namesrvAddr = System.getProperty(MixAll.NAMESRV_ADDR_PROPERTY, System.getenv(MixAll.NAMESRV_ADDR_ENV));
 
@@ -1313,6 +1317,7 @@ public class BrokerConfig extends BrokerIdentity {
         return asyncSendEnable;
     }
 
+    // 应该是服务启动是根据配置文件反射赋值的
     public void setAsyncSendEnable(boolean asyncSendEnable) {
         this.asyncSendEnable = asyncSendEnable;
     }

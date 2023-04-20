@@ -208,7 +208,6 @@ public class CompactionLog {
                         return false;
                     }
                     return putMessageFromRemote(response.getBody());
-//                    positionMgr.setOffset(topic, queueId, currOffset);
                 });
         }
 
@@ -246,6 +245,8 @@ public class CompactionLog {
 //        positionMgr.setOffset(topic, queueId, currentPullOffset);
         state.compareAndSet(State.INITIALIZING, State.NORMAL);
     }
+
+
     private void loadFromRemoteAsync() {
         compactionStore.getCompactionSchedule().submit(() -> {
             try {
@@ -1072,6 +1073,7 @@ public class CompactionLog {
             }
         }
 
+        // note 重要
         public synchronized void roll(int baseOffset) throws IOException {
 
             MappedFile mappedFile = mappedFileQueue.tryCreateMappedFile(baseOffset);

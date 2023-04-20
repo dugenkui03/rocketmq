@@ -143,9 +143,11 @@ public class TimerMessageStore {
     private final BrokerStatsManager brokerStatsManager;
     private Function<MessageExtBrokerInner, PutMessageResult> escapeBridgeHook;
 
-    public TimerMessageStore(final MessageStore messageStore, final MessageStoreConfig storeConfig,
-        TimerCheckpoint timerCheckpoint, TimerMetrics timerMetrics,
-        final BrokerStatsManager brokerStatsManager) throws IOException {
+    public TimerMessageStore(final MessageStore messageStore,
+                             final MessageStoreConfig storeConfig, // note 定时消息的配置
+                             TimerCheckpoint timerCheckpoint,
+                             TimerMetrics timerMetrics,
+                             final BrokerStatsManager brokerStatsManager) throws IOException {
         this.messageStore = messageStore;
         this.storeConfig = storeConfig;
         this.commitLogFileSize = storeConfig.getMappedFileSizeCommitLog();
@@ -438,7 +440,6 @@ public class TimerMessageStore {
             @Override public void run() {
                 if (TimerMessageStore.this.messageStore instanceof DefaultMessageStore &&
                     ((DefaultMessageStore) TimerMessageStore.this.messageStore).getBrokerConfig().isInBrokerContainer()) {
-//                    InnerLoggerFactory.BROKER_IDENTITY.set(((DefaultMessageStore) TimerMessageStore.this.messageStore).getBrokerConfig().getLoggerIdentifier());
                 }
                 try {
                     long minPy = messageStore.getMinPhyOffset();

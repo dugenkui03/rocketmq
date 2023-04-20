@@ -25,6 +25,10 @@ import org.apache.rocketmq.store.SelectMappedBufferResult;
 
 import java.nio.ByteBuffer;
 
+
+/**
+ * 定时消息
+ */
 public class TimerLog {
     private static Logger log = LoggerFactory.getLogger(LoggerName.STORE_LOGGER_NAME);
     public final static int BLANK_MAGIC_CODE = 0xBBCCDDEE ^ 1880681586 + 8;
@@ -58,19 +62,26 @@ public class TimerLog {
     }
 
     public long append(byte[] data, int pos, int len) {
+        // 获取最后一个 MappedFile
         MappedFile mappedFile = this.mappedFileQueue.getLastMappedFile();
+
+        // 如果文件为空或者文件写满
         if (null == mappedFile || mappedFile.isFull()) {
             mappedFile = this.mappedFileQueue.getLastMappedFile(0);
         }
+
         if (null == mappedFile) {
             log.error("Create mapped file1 error for timer log");
             return -1;
         }
+
+
         if (len + MIN_BLANK_LEN > mappedFile.getFileSize() - mappedFile.getWrotePosition()) {
             ByteBuffer byteBuffer = ByteBuffer.allocate(MIN_BLANK_LEN);
             byteBuffer.putInt(mappedFile.getFileSize() - mappedFile.getWrotePosition());
             byteBuffer.putLong(0);
             byteBuffer.putInt(BLANK_MAGIC_CODE);
+            // note
             if (mappedFile.appendMessage(byteBuffer.array())) {
                 //need to set the wrote position
                 mappedFile.setWrotePosition(mappedFile.getFileSize());

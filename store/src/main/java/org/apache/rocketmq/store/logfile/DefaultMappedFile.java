@@ -59,6 +59,7 @@ import sun.misc.Unsafe;
 import sun.nio.ch.DirectBuffer;
 
 public class DefaultMappedFile extends AbstractMappedFile {
+
     public static final int OS_PAGE_SIZE = 1024 * 4;
     public static final Unsafe UNSAFE = getUnsafe();
     private static final Method IS_LOADED_METHOD;
@@ -66,6 +67,7 @@ public class DefaultMappedFile extends AbstractMappedFile {
 
     protected static final Logger log = LoggerFactory.getLogger(LoggerName.STORE_LOGGER_NAME);
 
+    // note "总共分配的虚拟内存"
     protected static final AtomicLong TOTAL_MAPPED_VIRTUAL_MEMORY = new AtomicLong(0);
 
     protected static final AtomicInteger TOTAL_MAPPED_FILES = new AtomicInteger(0);
@@ -77,6 +79,9 @@ public class DefaultMappedFile extends AbstractMappedFile {
     protected volatile int wrotePosition;
     protected volatile int committedPosition;
     protected volatile int flushedPosition;
+    /**
+     * 初始化见 {init()} 方法
+     */
     protected int fileSize;
     protected FileChannel fileChannel;
     /**
@@ -87,6 +92,8 @@ public class DefaultMappedFile extends AbstractMappedFile {
     protected String fileName;
     protected long fileFromOffset;
     protected File file;
+
+    // note 映射到文件：对大文件的读写很快
     protected MappedByteBuffer mappedByteBuffer;
     protected volatile long storeTimestamp = 0;
     protected boolean firstCreateInQueue = false;
@@ -155,17 +162,27 @@ public class DefaultMappedFile extends AbstractMappedFile {
     }
 
     private void init(final String fileName, final int fileSize) throws IOException {
-        this.fileName = fileName;
+        // note init_fileSize
         this.fileSize = fileSize;
+
+        this.fileName = fileName;
         this.file = new File(fileName);
+        // note
         this.fileFromOffset = Long.parseLong(this.file.getName());
+
         boolean ok = false;
 
-        UtilAll.ensureDirOK(this.file.getParent());
+        UtilAll.ensureDirOK(
+                this.file.getParent() // 上级目录的相对路径
+        );
 
         try {
             this.fileChannel = new RandomAccessFile(this.file, "rw").getChannel();
+
+            // note 重要：重要字短，都靠 mappedByteBuffer 完成 commit log文件 的读写了
             this.mappedByteBuffer = this.fileChannel.map(MapMode.READ_WRITE, 0, fileSize);
+
+            // ？统计？
             TOTAL_MAPPED_VIRTUAL_MEMORY.addAndGet(fileSize);
             TOTAL_MAPPED_FILES.incrementAndGet();
             ok = true;
@@ -337,19 +354,27 @@ public class DefaultMappedFile extends AbstractMappedFile {
      *
      * @param offset The offset of the subarray to be used.
      * @param length The length of the subarray to be used.
+     *
+     * @return 是否写入成功，如果要写入的数据超过了文件size则失败？替换成容量更准确？
      */
     @Override
     public boolean appendMessage(final byte[] data, final int offset, final int length) {
+        // note 当前写入的偏移量
         int currentPos = WROTE_POSITION_UPDATER.get(this);
+
 
         if ((currentPos + length) <= this.fileSize) {
             try {
                 ByteBuffer buf = this.mappedByteBuffer.slice();
                 buf.position(currentPos);
+                // note 写入数据
                 buf.put(data, offset, length);
             } catch (Throwable e) {
+                // todo 失败了为什么不返回
                 log.error("Error occurred when append message to mappedFile.", e);
             }
+
+            // 更新写入的偏移量
             WROTE_POSITION_UPDATER.addAndGet(this, length);
             return true;
         }
@@ -604,29 +629,21 @@ public class DefaultMappedFile extends AbstractMappedFile {
         this.mappedByteBufferAccessCountSinceLastSwap++;
 
         long beginTime = System.currentTimeMillis();
+        // note 用 mappedByteBuffer 的剩余缓冲创建 byteBuffer
         ByteBuffer byteBuffer = this.mappedByteBuffer.slice();
         long flush = 0;
         // long time = System.currentTimeMillis();
         for (long i = 0, j = 0; i < this.fileSize; i += DefaultMappedFile.OS_PAGE_SIZE, j++) {
+            // note 将字节0写入位置i
             byteBuffer.put((int) i, (byte) 0);
-            // force flush when flush disk type is sync
+            // force flush when flush disk type is sync/同步
             if (type == FlushDiskType.SYNC_FLUSH) {
                 if ((i / OS_PAGE_SIZE) - (flush / OS_PAGE_SIZE) >= pages) {
                     flush = i;
+                    // 强制刷盘
                     mappedByteBuffer.force();
                 }
             }
-
-            // prevent gc
-            // if (j % 1000 == 0) {
-            //     log.info("j={}, costTime={}", j, System.currentTimeMillis() - time);
-            //     time = System.currentTimeMillis();
-            //     try {
-            //         Thread.sleep(0);
-            //     } catch (InterruptedException e) {
-            //         log.error("Interrupted", e);
-            //     }
-            // }
         }
 
         // force flush when prepare load finished

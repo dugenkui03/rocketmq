@@ -39,10 +39,11 @@ import org.apache.rocketmq.store.logfile.MappedFile;
 public class AllocateMappedFileService extends ServiceThread {
     private static final Logger log = LoggerFactory.getLogger(LoggerName.STORE_LOGGER_NAME);
     private static int waitTimeOut = 1000 * 5;
-    private ConcurrentMap<String, AllocateRequest> requestTable =
-        new ConcurrentHashMap<>();
-    private PriorityBlockingQueue<AllocateRequest> requestQueue =
-        new PriorityBlockingQueue<>();
+
+    // note 请求队列是个优先阻塞队列
+    private PriorityBlockingQueue<AllocateRequest> requestQueue = new PriorityBlockingQueue<>();
+    private ConcurrentMap<String, AllocateRequest> requestTable = new ConcurrentHashMap<>();
+
     private volatile boolean hasException = false;
     private DefaultMessageStore messageStore;
 
@@ -138,9 +139,11 @@ public class AllocateMappedFileService extends ServiceThread {
         }
     }
 
+    @Override
     public void run() {
         log.info(this.getServiceName() + " service started");
 
+        // 服务没有停止 &&
         while (!this.isStopped() && this.mmapOperation()) {
 
         }
@@ -154,19 +157,24 @@ public class AllocateMappedFileService extends ServiceThread {
         boolean isSuccess = false;
         AllocateRequest req = null;
         try {
+            // note 阻塞直到获取数据
             req = this.requestQueue.take();
             AllocateRequest expectedRequest = this.requestTable.get(req.getFilePath());
+
             if (null == expectedRequest) {
                 log.warn("this mmap request expired, maybe cause timeout " + req.getFilePath() + " "
                     + req.getFileSize());
                 return true;
             }
+
+            // 判断是否是一个对象
             if (expectedRequest != req) {
                 log.warn("never expected here,  maybe cause timeout " + req.getFilePath() + " "
                     + req.getFileSize() + ", req:" + req + ", expectedRequest:" + expectedRequest);
                 return true;
             }
 
+            // note 如果没有
             if (req.getMappedFile() == null) {
                 long beginTime = System.currentTimeMillis();
 
@@ -180,6 +188,7 @@ public class AllocateMappedFileService extends ServiceThread {
                         mappedFile = new DefaultMappedFile(req.getFilePath(), req.getFileSize(), messageStore.getTransientStorePool());
                     }
                 } else {
+                    // note 使用指定的路径和容量创建 mapFile，关注构造函数调用的init方法
                     mappedFile = new DefaultMappedFile(req.getFilePath(), req.getFileSize());
                 }
 
@@ -190,15 +199,20 @@ public class AllocateMappedFileService extends ServiceThread {
                         + " " + req.getFilePath() + " " + req.getFileSize());
                 }
 
+                // note 预写 mappedFile 文件
                 // pre write mappedFile
-                if (mappedFile.getFileSize() >= this.messageStore.getMessageStoreConfig()
-                    .getMappedFileSizeCommitLog()
-                    &&
-                    this.messageStore.getMessageStoreConfig().isWarmMapedFileEnable()) {
-                    mappedFile.warmMappedFile(this.messageStore.getMessageStoreConfig().getFlushDiskType(),
-                        this.messageStore.getMessageStoreConfig().getFlushLeastPagesWhenWarmMapedFile());
+                if (
+                        // note 如果指定的 mappedFile 大于等于「CommitLog file size,default is 1G」
+                        //      而且
+                        mappedFile.getFileSize() >= this.messageStore.getMessageStoreConfig().getMappedFileSizeCommitLog()
+                                && this.messageStore.getMessageStoreConfig().isWarmMapedFileEnable()) {
+                    mappedFile.warmMappedFile(
+                            this.messageStore.getMessageStoreConfig().getFlushDiskType(), // 刷盘方式：同步、异步
+                            this.messageStore.getMessageStoreConfig().getFlushLeastPagesWhenWarmMapedFile() // 刷盘大小
+                    );
                 }
 
+                // note 创建 mappedFile 成功
                 req.setMappedFile(mappedFile);
                 this.hasException = false;
                 isSuccess = true;
@@ -224,6 +238,7 @@ public class AllocateMappedFileService extends ServiceThread {
         return true;
     }
 
+    // 分配文件请求
     static class AllocateRequest implements Comparable<AllocateRequest> {
         // Full file path
         private String filePath;
@@ -268,6 +283,7 @@ public class AllocateMappedFileService extends ServiceThread {
             this.mappedFile = mappedFile;
         }
 
+        @Override
         public int compareTo(AllocateRequest other) {
             if (this.fileSize < other.fileSize)
                 return 1;
@@ -286,8 +302,6 @@ public class AllocateMappedFileService extends ServiceThread {
                     return 0;
                 }
             }
-            // return this.fileSize < other.fileSize ? 1 : this.fileSize >
-            // other.fileSize ? -1 : 0;
         }
 
         @Override

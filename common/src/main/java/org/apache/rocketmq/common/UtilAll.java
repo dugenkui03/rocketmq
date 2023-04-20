@@ -109,10 +109,15 @@ public class UtilAll {
         return sb.toString();
     }
 
+    /**
+     * 将偏移量转换成文件名称
+     * @param offset 偏移量
+     * @return
+     */
     public static String offset2FileName(final long offset) {
         final NumberFormat nf = NumberFormat.getInstance();
-        nf.setMinimumIntegerDigits(20);
-        nf.setMaximumFractionDigits(0);
+        nf.setMinimumIntegerDigits(20); // 设置数的整数部分所允许的最小位数
+        nf.setMaximumFractionDigits(0); // 设置最多保留小数位数，不足不补0
         nf.setGroupingUsed(false);
         return nf.format(offset);
     }
@@ -303,6 +308,7 @@ public class UtilAll {
     public static int crc32(byte[] array, int offset, int length) {
         CRC32 crc32 = new CRC32();
         crc32.update(array, offset, length);
+        // 0x7FFFFFFF 是 011111111_11111111_11111111_1111111
         return (int) (crc32.getValue() & 0x7FFFFFFF);
     }
 

@@ -54,8 +54,7 @@ public class MappedFileQueue implements Swappable {
 
     protected volatile long storeTimestamp = 0;
 
-    public MappedFileQueue(final String storePath, int mappedFileSize,
-        AllocateMappedFileService allocateMappedFileService) {
+    public MappedFileQueue(final String storePath, int mappedFileSize, AllocateMappedFileService allocateMappedFileService) {
         this.storePath = storePath;
         this.mappedFileSize = mappedFileSize;
         this.allocateMappedFileService = allocateMappedFileService;
@@ -302,6 +301,7 @@ public class MappedFileQueue implements Swappable {
         }
 
         if (createOffset != -1 && needCreate) {
+            // 走到这里时的情况
             return tryCreateMappedFile(createOffset);
         }
 
