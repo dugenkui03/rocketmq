@@ -62,8 +62,10 @@ public class CommitLog implements Swappable {
     // Message's MAGIC CODE daa320a7
     public final static int MESSAGE_MAGIC_CODE = -626843481;
     protected static final Logger log = LoggerFactory.getLogger(LoggerName.STORE_LOGGER_NAME);
+
     // End of file empty MAGIC CODE cbd43194
     public final static int BLANK_MAGIC_CODE = -875286124;
+
     protected final MappedFileQueue mappedFileQueue;
     protected final DefaultMessageStore defaultMessageStore;
 
@@ -88,14 +90,22 @@ public class CommitLog implements Swappable {
 
     public CommitLog(final DefaultMessageStore messageStore) {
         String storePath = messageStore.getMessageStoreConfig().getStorePathCommitLog();
+        // note 创建 CommitLog 的时候创建对应的 MappedFile
         if (storePath.contains(MixAll.MULTI_PATH_SPLITTER)) {
-            this.mappedFileQueue = new MultiPathMappedFileQueue(messageStore.getMessageStoreConfig(),
-                messageStore.getMessageStoreConfig().getMappedFileSizeCommitLog(),
-                messageStore.getAllocateMappedFileService(), this::getFullStorePaths);
+            this.mappedFileQueue = new MultiPathMappedFileQueue(
+                    messageStore.getMessageStoreConfig(),
+                    messageStore.getMessageStoreConfig().getMappedFileSizeCommitLog(),
+                    messageStore.getAllocateMappedFileService(),
+                    this::getFullStorePaths
+            );
         } else {
-            this.mappedFileQueue = new MappedFileQueue(storePath,
-                messageStore.getMessageStoreConfig().getMappedFileSizeCommitLog(),
-                messageStore.getAllocateMappedFileService());
+            // note 先看简单的
+            this.mappedFileQueue = new MappedFileQueue(
+                    storePath,
+                    // commit log 文件大小，默认 1G
+                    messageStore.getMessageStoreConfig().getMappedFileSizeCommitLog(),
+                    messageStore.getAllocateMappedFileService()
+            );
         }
 
         this.defaultMessageStore = messageStore;
@@ -788,7 +798,9 @@ public class CommitLog implements Swappable {
         updateMaxMessageSize(putMessageThreadLocal);
         String topicQueueKey = generateKey(putMessageThreadLocal.getKeyBuilder(), msg);
         long elapsedTimeInLock = 0;
+
         MappedFile unlockMappedFile = null;
+        // note 第一次调用时可能为null
         MappedFile mappedFile = this.mappedFileQueue.getLastMappedFile();
 
         long currOffset;
@@ -832,6 +844,7 @@ public class CommitLog implements Swappable {
                 defaultMessageStore.assignOffset(msg, getMessageNum(msg));
             }
 
+            // note 将消息编码到 putMessageThreadLocal 字段对象中
             PutMessageResult encodeResult = putMessageThreadLocal.getEncoder().encode(msg);
             if (encodeResult != null) {
                 return CompletableFuture.completedFuture(encodeResult);
@@ -851,6 +864,7 @@ public class CommitLog implements Swappable {
                     msg.setStoreTimestamp(beginLockTimestamp);
                 }
 
+                // note
                 if (null == mappedFile || mappedFile.isFull()) {
                     mappedFile = this.mappedFileQueue.getLastMappedFile(0); // Mark: NewFile may be cause noise
                 }
@@ -1664,6 +1678,8 @@ public class CommitLog implements Swappable {
     class DefaultAppendMessageCallback implements AppendMessageCallback {
         // File at the end of the minimum fixed length empty
         private static final int END_FILE_MIN_BLANK_LENGTH = 4 + 4;
+
+        // note 保存消息内容
         // Store the message content
         private final ByteBuffer msgStoreItemMemory;
 
@@ -1671,8 +1687,19 @@ public class CommitLog implements Swappable {
             this.msgStoreItemMemory = ByteBuffer.allocate(END_FILE_MIN_BLANK_LENGTH);
         }
 
-        public AppendMessageResult doAppend(final long fileFromOffset, final ByteBuffer byteBuffer, final int maxBlank,
-            final MessageExtBrokerInner msgInner, PutMessageContext putMessageContext) {
+        /**
+         * @param fileFromOffset
+         * @param byteBuffer 要写入的缓冲区
+         * @param maxBlank 剩余可写的空间？
+         * @param msgInner
+         * @param putMessageContext
+         * @return
+         */
+        public AppendMessageResult doAppend(final long fileFromOffset,
+                                            final ByteBuffer byteBuffer,
+                                            final int maxBlank,
+                                            final MessageExtBrokerInner msgInner,
+                                            PutMessageContext putMessageContext) {
             // STORETIMESTAMP + STOREHOSTADDRESS + OFFSET <br>
 
             // PHY OFFSET
@@ -1680,7 +1707,13 @@ public class CommitLog implements Swappable {
 
             Supplier<String> msgIdSupplier = () -> {
                 int sysflag = msgInner.getSysFlag();
-                int msgIdLen = (sysflag & MessageSysFlag.STOREHOSTADDRESS_V6_FLAG) == 0 ? 4 + 4 + 8 : 16 + 4 + 8;
+                // note 保存数据的host是否是 ipv6
+                //      ipv4： 16
+                //      ipv6: 28
+                int msgIdLen = (sysflag & MessageSysFlag.STOREHOSTADDRESS_V6_FLAG) == 0 ?
+                        4 + 4 + 8 :
+                        16 + 4 + 8;
+
                 ByteBuffer msgIdBuffer = ByteBuffer.allocate(msgIdLen);
                 MessageExt.socketAddress2ByteBuffer(msgInner.getStoreHost(), msgIdBuffer);
                 msgIdBuffer.clear();//because socketAddress2ByteBuffer flip the buffer
@@ -1711,6 +1744,7 @@ public class CommitLog implements Swappable {
             ByteBuffer preEncodeBuffer = msgInner.getEncodedBuff();
             final int msgLen = preEncodeBuffer.getInt(0);
 
+            // note 检测是否有足够多的空间保存消息
             // Determines whether there is sufficient free space
             if ((msgLen + END_FILE_MIN_BLANK_LENGTH) > maxBlank) {
                 this.msgStoreItemMemory.clear();
@@ -1721,7 +1755,9 @@ public class CommitLog implements Swappable {
                 // 3 The remaining space may be any value
                 // Here the length of the specially set maxBlank
                 final long beginTimeMills = CommitLog.this.defaultMessageStore.now();
+                // note
                 byteBuffer.put(this.msgStoreItemMemory.array(), 0, 8);
+
                 return new AppendMessageResult(AppendMessageStatus.END_OF_FILE, wroteOffset,
                     maxBlank, /* only wrote 8 bytes, but declare wrote maxBlank for compute write position */
                     msgIdSupplier, msgInner.getStoreTimestamp(),
@@ -1742,6 +1778,8 @@ public class CommitLog implements Swappable {
 
             final long beginTimeMills = CommitLog.this.defaultMessageStore.now();
             CommitLog.this.getMessageStore().getPerfCounter().startTick("WRITE_MEMORY_TIME_MS");
+
+            // note
             // Write messages to the queue buffer
             byteBuffer.put(preEncodeBuffer);
             CommitLog.this.getMessageStore().getPerfCounter().endTick("WRITE_MEMORY_TIME_MS");
@@ -1749,7 +1787,10 @@ public class CommitLog implements Swappable {
             return new AppendMessageResult(AppendMessageStatus.PUT_OK, wroteOffset, msgLen, msgIdSupplier,
                 msgInner.getStoreTimestamp(), queueOffset, CommitLog.this.defaultMessageStore.now() - beginTimeMills, messageNum);
         }
+        // note end of doAppend
 
+
+        // note batch
         public AppendMessageResult doAppend(final long fileFromOffset, final ByteBuffer byteBuffer, final int maxBlank,
             final MessageExtBatch messageExtBatch, PutMessageContext putMessageContext) {
             byteBuffer.mark();

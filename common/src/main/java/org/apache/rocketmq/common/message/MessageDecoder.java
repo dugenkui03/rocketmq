@@ -171,6 +171,7 @@ public class MessageDecoder {
         if (storeSize > 0) {
             byteBuffer = ByteBuffer.allocate(storeSize);
         } else {
+            // note 消息结构
             storeSize = 4 // 1 TOTALSIZE
                 + 4 // 2 MAGICCODE
                 + 4 // 3 BODYCRC

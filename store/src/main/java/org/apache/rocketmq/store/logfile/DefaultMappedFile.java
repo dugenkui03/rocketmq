@@ -93,7 +93,11 @@ public class DefaultMappedFile extends AbstractMappedFile {
     protected long fileFromOffset;
     protected File file;
 
-    // note 映射到文件：对大文件的读写很快
+
+    /**
+     * note 映射到文件：对大文件的读写很快
+     *      如果 写缓存 writeBuffer 不为空则先写入写缓存，在放到 FileChannel 中
+     */
     protected MappedByteBuffer mappedByteBuffer;
     protected volatile long storeTimestamp = 0;
     protected boolean firstCreateInQueue = false;
@@ -273,19 +277,24 @@ public class DefaultMappedFile extends AbstractMappedFile {
     }
 
     @Override
-    public AppendMessageResult appendMessage(final MessageExtBrokerInner msg, final AppendMessageCallback cb,
-        PutMessageContext putMessageContext) {
+    public AppendMessageResult appendMessage(final MessageExtBrokerInner msg,
+                                             final AppendMessageCallback cb,
+                                             PutMessageContext putMessageContext) {
         return appendMessagesInner(msg, cb, putMessageContext);
     }
 
+    // note 添加数据
     @Override
-    public AppendMessageResult appendMessages(final MessageExtBatch messageExtBatch, final AppendMessageCallback cb,
-        PutMessageContext putMessageContext) {
+    public AppendMessageResult appendMessages(final MessageExtBatch messageExtBatch,
+                                              final AppendMessageCallback cb,
+                                              PutMessageContext putMessageContext) {
         return appendMessagesInner(messageExtBatch, cb, putMessageContext);
     }
 
-    public AppendMessageResult appendMessagesInner(final MessageExt messageExt, final AppendMessageCallback cb,
-        PutMessageContext putMessageContext) {
+    // 添加数据
+    public AppendMessageResult appendMessagesInner(final MessageExt messageExt,
+                                                   final AppendMessageCallback cb,
+                                                   PutMessageContext putMessageContext) {
         assert messageExt != null;
         assert cb != null;
 
@@ -293,16 +302,28 @@ public class DefaultMappedFile extends AbstractMappedFile {
 
         if (currentPos < this.fileSize) {
             ByteBuffer byteBuffer = appendMessageBuffer().slice();
+            // note 啥意思
             byteBuffer.position(currentPos);
+
             AppendMessageResult result;
             if (messageExt instanceof MessageExtBatch && !((MessageExtBatch) messageExt).isInnerBatch()) {
                 // traditional batch message
-                result = cb.doAppend(this.getFileFromOffset(), byteBuffer, this.fileSize - currentPos,
-                    (MessageExtBatch) messageExt, putMessageContext);
+                result = cb.doAppend(
+                        this.getFileFromOffset(),
+                        byteBuffer, // note
+                        this.fileSize - currentPos,
+                        (MessageExtBatch) messageExt,
+                        putMessageContext
+                );
             } else if (messageExt instanceof MessageExtBrokerInner) {
                 // traditional single message or newly introduced inner-batch message
-                result = cb.doAppend(this.getFileFromOffset(), byteBuffer, this.fileSize - currentPos,
-                    (MessageExtBrokerInner) messageExt, putMessageContext);
+                result = cb.doAppend(
+                        this.getFileFromOffset(),
+                        byteBuffer,
+                        this.fileSize - currentPos,
+                        (MessageExtBrokerInner) messageExt,
+                        putMessageContext
+                );
             } else {
                 return new AppendMessageResult(AppendMessageStatus.UNKNOWN_ERROR);
             }
