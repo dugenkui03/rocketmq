@@ -130,6 +130,7 @@ public interface MappedFile {
 
     /**
      * Returns the global offset of the current {code MappedFile}, it's a long value of the file name.
+     * note MappedFile 的偏移量，是 MappedFile 的文件名称
      *
      * @return the offset of this file
      */

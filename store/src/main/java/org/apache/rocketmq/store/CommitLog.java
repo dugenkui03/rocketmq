@@ -1191,11 +1191,15 @@ public class CommitLog implements Swappable {
     }
 
     public long getMinOffset() {
+        // 获取最新的 MappedFile
         MappedFile mappedFile = this.mappedFileQueue.getFirstMappedFile();
+
         if (mappedFile != null) {
             if (mappedFile.isAvailable()) {
+                //note MappedFile 的偏移量，是 MappedFile 的文件名称
                 return mappedFile.getFileFromOffset();
             } else {
+                // note 兼容mappedFile正好被关闭、下个 MappedFile被打开的情况？
                 return this.rollNextFile(mappedFile.getFileFromOffset());
             }
         }
@@ -1214,8 +1218,10 @@ public class CommitLog implements Swappable {
     }
 
     public long rollNextFile(final long offset) {
+        // note MappedFile 大小，默认 1G
         int mappedFileSize = this.defaultMessageStore.getMessageStoreConfig().getMappedFileSizeCommitLog();
-        return offset + mappedFileSize - offset % mappedFileSize;
+        return offset + mappedFileSize // note 下一个文件的开始偏移量
+                - offset % mappedFileSize; // note ??
     }
 
     public void destroy() {

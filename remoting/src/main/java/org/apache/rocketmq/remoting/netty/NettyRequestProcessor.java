@@ -21,12 +21,14 @@ import org.apache.rocketmq.remoting.protocol.RemotingCommand;
 
 /**
  * Common remoting command processor
+ *
+ * note 处理远程请求
  */
 public interface NettyRequestProcessor {
 
     /**
      * @param ctx
-     * @param request
+     * @param request note 远程请求数据
      * @return
      * @throws Exception
      */

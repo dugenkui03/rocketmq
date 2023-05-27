@@ -58,6 +58,7 @@ public class BrokerConfig extends BrokerIdentity {
     private boolean brokerTopicEnable = true;
     @ImportantField
     private boolean autoCreateSubscriptionGroup = true;
+
     private String messageStorePlugIn = "";
 
     private static final int PROCESSOR_NUMBER = Runtime.getRuntime().availableProcessors();
@@ -324,6 +325,8 @@ public class BrokerConfig extends BrokerIdentity {
 
     /**
      * Is startup controller mode, which support auto switch broker's role.
+     *
+     * note "自动支持切换broker角色"
      */
     private boolean enableControllerMode = false;
 

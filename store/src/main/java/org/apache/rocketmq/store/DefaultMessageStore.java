@@ -116,6 +116,7 @@ public class DefaultMessageStore implements MessageStore {
     public final PerfCounter.Ticks perfs = new PerfCounter.Ticks(LOGGER);
 
     private final MessageStoreConfig messageStoreConfig;
+
     // CommitLog
     private final CommitLog commitLog;
 
@@ -157,6 +158,8 @@ public class DefaultMessageStore implements MessageStore {
     private volatile boolean shutdown = true;
 
     private StoreCheckpoint storeCheckpoint;
+
+    // note 定时消息 MessageStore
     private TimerMessageStore timerMessageStore;
 
     private final LinkedList<CommitLogDispatcher> dispatcherList;
@@ -380,6 +383,7 @@ public class DefaultMessageStore implements MessageStore {
         lockFile.getChannel().write(ByteBuffer.wrap("lock".getBytes(StandardCharsets.UTF_8)));
         lockFile.getChannel().force(true);
 
+        // note
         this.reputMessageService.setReputFromOffset(this.commitLog.getConfirmOffset());
         this.reputMessageService.start();
 
@@ -2704,6 +2708,7 @@ public class DefaultMessageStore implements MessageStore {
 
     }
 
+    // note ReputMessageService 从 commit log 中读取数据并构建 Consumer 和 IndexFile 文件
     class ReputMessageService extends ServiceThread {
 
         protected volatile long reputFromOffset = 0;
@@ -2745,12 +2750,15 @@ public class DefaultMessageStore implements MessageStore {
             return this.reputFromOffset < DefaultMessageStore.this.getConfirmOffset();
         }
 
+        // note ？构建 ConsumerQueue 和 IndexFile 文件？
         public void doReput() {
             if (this.reputFromOffset < DefaultMessageStore.this.commitLog.getMinOffset()) {
                 LOGGER.warn("The reputFromOffset={} is smaller than minPyOffset={}, this usually indicate that the dispatch behind too much and the commitlog has expired.",
                     this.reputFromOffset, DefaultMessageStore.this.commitLog.getMinOffset());
                 this.reputFromOffset = DefaultMessageStore.this.commitLog.getMinOffset();
             }
+
+
             for (boolean doNext = true; this.isCommitLogAvailable() && doNext; ) {
 
                 SelectMappedBufferResult result = DefaultMessageStore.this.commitLog.getData(reputFromOffset);
@@ -3009,6 +3017,7 @@ public class DefaultMessageStore implements MessageStore {
         }
     }
 
+    // note ?会不会把数据顺序搞乱?
     class ConcurrentReputMessageService extends ReputMessageService {
 
         private static final int BATCH_SIZE = 1024 * 1024 * 4;
@@ -3097,6 +3106,7 @@ public class DefaultMessageStore implements MessageStore {
                         try {
                             TimeUnit.MILLISECONDS.sleep(1);
                         } catch (Exception e) {
+                            // note log
                             e.printStackTrace();
                         }
                         over = mappedPageHoldCount.get() == 0;

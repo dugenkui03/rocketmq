@@ -226,6 +226,8 @@ public class MessageStoreConfig {
     private boolean warmMapedFileEnable = false;
     private boolean offsetCheckInSlave = false;
     private boolean debugLockEnable = false;
+
+    // note 是否允许消息重复？
     private boolean duplicationEnable = false;
     private boolean diskFallRecorded = true;
     private long osPageCacheBusyTimeOutMills = 1000;
@@ -248,6 +250,7 @@ public class MessageStoreConfig {
 
     private boolean enableScheduleMessageStats = true;
 
+    // https://github.com/apache/rocketmq/blob/develop/docs/cn/Example_LMQ.md
     private boolean enableLmq = false;
     private boolean enableMultiDispatch = false;
     private int maxLmqConsumeQueueNum = 20000;

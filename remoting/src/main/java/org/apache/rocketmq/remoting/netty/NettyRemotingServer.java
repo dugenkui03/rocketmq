@@ -45,6 +45,7 @@ import io.netty.util.TimerTask;
 import io.netty.util.concurrent.DefaultEventExecutorGroup;
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.security.cert.CertificateException;
 import java.util.NoSuchElementException;
 import java.util.concurrent.ConcurrentHashMap;
@@ -72,7 +73,9 @@ import org.apache.rocketmq.remoting.exception.RemotingTooMuchRequestException;
 import org.apache.rocketmq.remoting.protocol.RemotingCommand;
 
 @SuppressWarnings("NullableProblems")
-public class NettyRemotingServer extends NettyRemotingAbstract implements RemotingServer {
+public class NettyRemotingServer
+        extends NettyRemotingAbstract  // note server
+        implements RemotingServer {
     private static final Logger log = LoggerFactory.getLogger(LoggerName.ROCKETMQ_REMOTING_NAME);
     private static final Logger TRAFFIC_LOGGER = LoggerFactory.getLogger(LoggerName.ROCKETMQ_TRAFFIC_NAME);
 
@@ -90,8 +93,9 @@ public class NettyRemotingServer extends NettyRemotingAbstract implements Remoti
     private DefaultEventExecutorGroup defaultEventExecutorGroup;
 
     /**
-     * NettyRemotingServer may hold multiple SubRemotingServer, each server will be stored in this container with a
-     * ListenPort key.
+     * note <port, xxServer>
+     * NettyRemotingServer may hold multiple {@link SubRemotingServer},
+     * each server will be stored in this container with a ListenPort key.
      */
     private final ConcurrentMap<Integer/*Port*/, NettyRemotingAbstract> remotingServerTable = new ConcurrentHashMap<>();
 
@@ -343,9 +347,12 @@ public class NettyRemotingServer extends NettyRemotingAbstract implements Remoti
 
     @Override
     public RemotingServer newRemotingServer(final int port) {
-        SubRemotingServer remotingServer = new SubRemotingServer(port,
-            this.nettyServerConfig.getServerOnewaySemaphoreValue(),
-            this.nettyServerConfig.getServerAsyncSemaphoreValue());
+        SubRemotingServer remotingServer = new SubRemotingServer(
+                port,
+                this.nettyServerConfig.getServerOnewaySemaphoreValue(),
+                this.nettyServerConfig.getServerAsyncSemaphoreValue()
+        );
+
         NettyRemotingAbstract existingServer = this.remotingServerTable.putIfAbsent(port, remotingServer);
         if (existingServer != null) {
             throw new RuntimeException("The port " + port + " already in use by another RemotingServer");
@@ -496,12 +503,23 @@ public class NettyRemotingServer extends NettyRemotingAbstract implements Remoti
 
         @Override
         protected void channelRead0(ChannelHandlerContext ctx, RemotingCommand msg) {
-            int localPort = RemotingHelper.parseSocketAddressPort(ctx.channel().localAddress());
+
+            // note 获取 ctx 绑定的 channel 的地址
+            SocketAddress socketAddress = ctx.channel().localAddress();
+
+            // note 获取端口号
+            int localPort = RemotingHelper.parseSocketAddressPort(socketAddress);
+
+            // note 获取 端口号对应的 xx
             NettyRemotingAbstract remotingAbstract = NettyRemotingServer.this.remotingServerTable.get(localPort);
+
             if (localPort != -1 && remotingAbstract != null) {
+                // note 接收处理消息
                 remotingAbstract.processMessageReceived(ctx, msg);
                 return;
             }
+
+
             // The related remoting server has been shutdown, so close the connected channel
             RemotingHelper.closeChannel(ctx.channel());
         }

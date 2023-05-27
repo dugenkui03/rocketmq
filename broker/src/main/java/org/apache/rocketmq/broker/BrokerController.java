@@ -163,10 +163,13 @@ public class BrokerController {
     private static final Logger LOG_WATER_MARK = LoggerFactory.getLogger(LoggerName.WATER_MARK_LOGGER_NAME);
     protected static final int HA_ADDRESS_MIN_LENGTH = 6;
 
+    // note 配置文件
     protected final BrokerConfig brokerConfig;
     private final NettyServerConfig nettyServerConfig;
     private final NettyClientConfig nettyClientConfig;
     protected final MessageStoreConfig messageStoreConfig;
+
+
     protected final ConsumerOffsetManager consumerOffsetManager;
     protected final BroadcastOffsetManager broadcastOffsetManager;
     protected final ConsumerManager consumerManager;
@@ -216,10 +219,13 @@ public class BrokerController {
     protected final BrokerStatsManager brokerStatsManager;
     protected final List<SendMessageHook> sendMessageHookList = new ArrayList<>();
     protected final List<ConsumeMessageHook> consumeMessageHookList = new ArrayList<>();
+
     protected MessageStore messageStore;
     protected RemotingServer remotingServer;
     protected CountDownLatch remotingServerStartLatch;
     protected RemotingServer fastRemotingServer;
+
+
     protected TopicConfigManager topicConfigManager;
     protected SubscriptionGroupManager subscriptionGroupManager;
     protected TopicQueueMappingManager topicQueueMappingManager;
@@ -263,7 +269,9 @@ public class BrokerController {
     protected volatile String minBrokerAddrInGroup = null;
     private final Lock lock = new ReentrantLock();
     protected final List<ScheduledFuture<?>> scheduledFutures = new ArrayList<>();
+
     protected ReplicasManager replicasManager;
+
     private long lastSyncTimeMs = System.currentTimeMillis();
     private BrokerMetricsManager brokerMetricsManager;
 
@@ -299,7 +307,10 @@ public class BrokerController {
         this.brokerStatsManager = messageStoreConfig.isEnableLmq() ? new LmqBrokerStatsManager(this.brokerConfig.getBrokerClusterName(), this.brokerConfig.isEnableDetailStat()) : new BrokerStatsManager(this.brokerConfig.getBrokerClusterName(), this.brokerConfig.isEnableDetailStat());
         this.consumerOffsetManager = messageStoreConfig.isEnableLmq() ? new LmqConsumerOffsetManager(this) : new ConsumerOffsetManager(this);
         this.broadcastOffsetManager = new BroadcastOffsetManager(this);
-        this.topicConfigManager = messageStoreConfig.isEnableLmq() ? new LmqTopicConfigManager(this) : new TopicConfigManager(this);
+        this.topicConfigManager = messageStoreConfig.isEnableLmq()
+                ? new LmqTopicConfigManager(this)
+                : new TopicConfigManager(this);
+
         this.topicQueueMappingManager = new TopicQueueMappingManager(this);
         this.pullMessageProcessor = new PullMessageProcessor(this);
         this.peekMessageProcessor = new PeekMessageProcessor(this);
@@ -728,7 +739,9 @@ public class BrokerController {
 
     public boolean initialize() throws CloneNotSupportedException {
 
+
         boolean result = this.topicConfigManager.load();
+
         result = result && this.topicQueueMappingManager.load();
         result = result && this.consumerOffsetManager.load();
         result = result && this.subscriptionGroupManager.load();
@@ -737,7 +750,14 @@ public class BrokerController {
 
         if (result) {
             try {
-                DefaultMessageStore defaultMessageStore = new DefaultMessageStore(this.messageStoreConfig, this.brokerStatsManager, this.messageArrivingListener, this.brokerConfig, topicConfigManager.getTopicConfigTable());
+                // note 默认的消息存储引擎
+                DefaultMessageStore defaultMessageStore = new DefaultMessageStore(
+                        this.messageStoreConfig,
+                        this.brokerStatsManager,
+                        this.messageArrivingListener,
+                        this.brokerConfig,
+                        topicConfigManager.getTopicConfigTable()
+                );
 
                 if (messageStoreConfig.isEnableDLegerCommitLog()) {
                     DLedgerRoleChangeHandler roleChangeHandler = new DLedgerRoleChangeHandler(this, defaultMessageStore);
@@ -746,18 +766,35 @@ public class BrokerController {
                 this.brokerStats = new BrokerStats(defaultMessageStore);
                 //load plugin
                 MessageStorePluginContext context = new MessageStorePluginContext(messageStoreConfig, brokerStatsManager, messageArrivingListener, brokerConfig, configuration);
+
+                // note 相当于构造了一个 ChainMessageStore，而且入参数message是最后一个被调用的
                 this.messageStore = MessageStoreFactory.build(context, defaultMessageStore);
-                this.messageStore.getDispatcherList().addFirst(new CommitLogDispatcherCalcBitMap(this.brokerConfig, this.consumerFilterManager));
+
+                // note
+                this.messageStore.getDispatcherList().addFirst(
+                        new CommitLogDispatcherCalcBitMap(this.brokerConfig, this.consumerFilterManager)
+                );
+
+                // support auto switch broker's role
                 if (this.brokerConfig.isEnableControllerMode()) {
                     this.replicasManager = new ReplicasManager(this);
                 }
 
                 // note 是否支持定时消息
                 if (messageStoreConfig.isTimerWheelEnable()) {
-                    this.timerCheckpoint = new TimerCheckpoint(BrokerPathConfigHelper.getTimerCheckPath(messageStoreConfig.getStorePathRootDir()));
+                    this.timerCheckpoint = new TimerCheckpoint(
+                            // note 获取定时消息保存的位置
+                            BrokerPathConfigHelper.getTimerCheckPath(
+                                    messageStoreConfig.getStorePathRootDir()
+                            )
+                    );
+
                     TimerMetrics timerMetrics = new TimerMetrics(BrokerPathConfigHelper.getTimerMetricsPath(messageStoreConfig.getStorePathRootDir()));
+                    // note 初始化定时的 MessageStore
                     this.timerMessageStore = new TimerMessageStore(messageStore, messageStoreConfig, timerCheckpoint, timerMetrics, brokerStatsManager);
                     this.timerMessageStore.registerEscapeBridgeHook(msg -> escapeBridge.putMessage(msg));
+
+                    // note 构建定时消息 messageStore
                     this.messageStore.setTimerMessageStore(this.timerMessageStore);
                 }
             } catch (IOException e) {
@@ -765,6 +802,8 @@ public class BrokerController {
                 LOG.error("BrokerController#initialize: unexpected error occurs", e);
             }
         }
+
+
         if (messageStore != null) {
             registerMessageStoreHook();
             result = result && this.messageStore.load();
@@ -972,6 +1011,7 @@ public class BrokerController {
         sendMessageProcessor.registerSendMessageHook(sendMessageHookList);
         sendMessageProcessor.registerConsumeMessageHook(consumeMessageHookList);
 
+
         this.remotingServer.registerProcessor(RequestCode.SEND_MESSAGE, sendMessageProcessor, this.sendMessageExecutor);
         this.remotingServer.registerProcessor(RequestCode.SEND_MESSAGE_V2, sendMessageProcessor, this.sendMessageExecutor);
         this.remotingServer.registerProcessor(RequestCode.SEND_BATCH_MESSAGE, sendMessageProcessor, this.sendMessageExecutor);
@@ -980,6 +1020,7 @@ public class BrokerController {
         this.fastRemotingServer.registerProcessor(RequestCode.SEND_MESSAGE_V2, sendMessageProcessor, this.sendMessageExecutor);
         this.fastRemotingServer.registerProcessor(RequestCode.SEND_BATCH_MESSAGE, sendMessageProcessor, this.sendMessageExecutor);
         this.fastRemotingServer.registerProcessor(RequestCode.CONSUMER_SEND_MSG_BACK, sendMessageProcessor, this.sendMessageExecutor);
+
         /**
          * PullMessageProcessor
          */

@@ -430,7 +430,8 @@ public class MappedFileQueue implements Swappable {
     public long getMaxOffset() {
         MappedFile mappedFile = getLastMappedFile();
         if (mappedFile != null) {
-            return mappedFile.getFileFromOffset() + mappedFile.getReadPosition();
+            return mappedFile.getFileFromOffset() // note MappedFile 的偏移量，是 MappedFile 的文件名称
+                    + mappedFile.getReadPosition(); // note 当前 MappedFile 的最大可读取位置
         }
         return 0;
     }

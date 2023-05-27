@@ -83,6 +83,9 @@ public class DefaultMappedFile extends AbstractMappedFile {
      * 初始化见 {init()} 方法
      */
     protected int fileSize;
+
+    // note 将文件映射为 虚拟内存
+    //      Channel: 代表与硬件、文件、网络等的数据通道，可以进行读写
     protected FileChannel fileChannel;
     /**
      * Message will put to here first, and then reput to FileChannel if writeBuffer is not null.
@@ -95,10 +98,12 @@ public class DefaultMappedFile extends AbstractMappedFile {
 
 
     /**
-     * note 映射到文件：对大文件的读写很快
+     * note 重要
+     *      映射到文件：对大文件的读写很快
      *      如果 写缓存 writeBuffer 不为空则先写入写缓存，在放到 FileChannel 中
      */
     protected MappedByteBuffer mappedByteBuffer;
+
     protected volatile long storeTimestamp = 0;
     protected boolean firstCreateInQueue = false;
     private long lastFlushTime = -1L;
@@ -183,8 +188,11 @@ public class DefaultMappedFile extends AbstractMappedFile {
         try {
             this.fileChannel = new RandomAccessFile(this.file, "rw").getChannel();
 
-            // note 重要：重要字短，都靠 mappedByteBuffer 完成 commit log文件 的读写了
-            this.mappedByteBuffer = this.fileChannel.map(MapMode.READ_WRITE, 0, fileSize);
+            // note 重要：重要字段，都靠 mappedByteBuffer 完成 commit log文件 的读写了
+            //      map(mode,a,b) 将 Channel 代表的文件映射到内存
+            this.mappedByteBuffer = this.fileChannel.map(
+                    MapMode.READ_WRITE, 0, fileSize
+            );
 
             // ？统计？
             TOTAL_MAPPED_VIRTUAL_MEMORY.addAndGet(fileSize);
@@ -388,7 +396,7 @@ public class DefaultMappedFile extends AbstractMappedFile {
             try {
                 ByteBuffer buf = this.mappedByteBuffer.slice();
                 buf.position(currentPos);
-                // note 写入数据
+                // note 重要 写入数据
                 buf.put(data, offset, length);
             } catch (Throwable e) {
                 // todo 失败了为什么不返回

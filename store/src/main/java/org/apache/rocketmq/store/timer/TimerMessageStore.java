@@ -68,7 +68,13 @@ import org.apache.rocketmq.store.metrics.DefaultStoreMetricsManager;
 import org.apache.rocketmq.store.stats.BrokerStatsManager;
 import org.apache.rocketmq.store.util.PerfCounter;
 
+/**
+ * FIXME 避免大量相同定时时刻的消息：（导致消息分发延迟，影响定时精度）
+ *
+ * ？定时消息预处理，批量拷贝？
+ */
 public class TimerMessageStore {
+    // note 定时消息topic rmq_sys_wheel_timer
     public static final String TIMER_TOPIC = TopicValidator.SYSTEM_TOPIC_PREFIX + "wheel_timer";
     public static final String TIMER_OUT_MS = MessageConst.PROPERTY_TIMER_OUT_MS;
     public static final String TIMER_ENQUEUE_MS = MessageConst.PROPERTY_TIMER_ENQUEUE_MS;
@@ -184,7 +190,10 @@ public class TimerMessageStore {
         enqueuePutService = new TimerEnqueuePutService();
         dequeueWarmService = new TimerDequeueWarmService();
         dequeueGetService = new TimerDequeueGetService();
+
         timerFlushService = new TimerFlushService();
+
+
         int getThreadNum = storeConfig.getTimerGetMessageThreadNum();
         if (getThreadNum <= 0) {
             getThreadNum = 1;
@@ -424,16 +433,22 @@ public class TimerMessageStore {
     public void start() {
         this.shouldStartTime = storeConfig.getDisappearTimeAfterStart() + System.currentTimeMillis();
         maybeMoveWriteTime();
+
+        // note 单独启用一个线程执行 xxService 代表的任务
         enqueueGetService.start();
         enqueuePutService.start();
         dequeueWarmService.start();
         dequeueGetService.start();
+
+
         for (int i = 0; i < dequeueGetMessageServices.length; i++) {
             dequeueGetMessageServices[i].start();
         }
         for (int i = 0; i < dequeuePutMessageServices.length; i++) {
             dequeuePutMessageServices[i].start();
         }
+
+        // note
         timerFlushService.start();
 
         scheduler.scheduleAtFixedRate(new Runnable() {
@@ -444,6 +459,7 @@ public class TimerMessageStore {
                 try {
                     long minPy = messageStore.getMinPhyOffset();
                     int checkOffset = timerLog.getOffsetForLastUnit();
+                    // note 删除旧数据，30分钟触发一次
                     timerLog.getMappedFileQueue().deleteExpiredFileByOffsetForTimerLog(minPy, checkOffset, TimerLog.UNIT_SIZE);
                 } catch (Exception e) {
                     LOGGER.error("Error in cleaning timerLog", e);
@@ -455,7 +471,6 @@ public class TimerMessageStore {
             @Override public void run() {
                 if (TimerMessageStore.this.messageStore instanceof DefaultMessageStore &&
                     ((DefaultMessageStore) TimerMessageStore.this.messageStore).getBrokerConfig().isInBrokerContainer()) {
-//                    InnerLoggerFactory.BROKER_IDENTITY.set(((DefaultMessageStore) TimerMessageStore.this.messageStore).getBrokerConfig().getLoggerIdentifier());
                 }
                 try {
                     if (storeConfig.isTimerEnableCheckMetrics()) {
@@ -463,6 +478,7 @@ public class TimerMessageStore {
                         if (!UtilAll.isItTimeToDo(when)) {
                             return;
                         }
+
                         long curr = System.currentTimeMillis();
                         if (curr - lastTimeOfCheckMetrics > 70 * 60 * 1000) {
                             lastTimeOfCheckMetrics = curr;
@@ -1576,6 +1592,7 @@ public class TimerMessageStore {
         return (magic & MAGIC_DELETE) != 0;
     }
 
+    // Runner
     class TimerFlushService extends ServiceThread {
         private final SimpleDateFormat sdf = new SimpleDateFormat("MM-dd HH:mm:ss");
 
@@ -1595,16 +1612,24 @@ public class TimerMessageStore {
         public void run() {
             TimerMessageStore.LOGGER.info(this.getServiceName() + " service start");
             long start = System.currentTimeMillis();
+
+            // note start 调用之后 stop 为 false
             while (!this.isStopped()) {
                 try {
                     prepareTimerCheckPoint();
+
                     timerLog.getMappedFileQueue().flush(0);
                     timerWheel.flush();
                     timerCheckpoint.flush();
+
+
                     if (System.currentTimeMillis() - start > storeConfig.getTimerProgressLogIntervalMs()) {
                         start = System.currentTimeMillis();
                         long tmpQueueOffset = currQueueOffset;
+
+                        // note 获取 定时消息topic 的消息队列
                         ConsumeQueue cq = (ConsumeQueue) messageStore.getConsumeQueue(TIMER_TOPIC, 0);
+
                         long maxOffsetInQueue = cq == null ? 0 : cq.getMaxOffsetInQueue();
                         TimerMessageStore.LOGGER.info("[{}]Timer progress-check commitRead:[{}] currRead:[{}] currWrite:[{}] readBehind:{} currReadOffset:{} offsetBehind:{} behindMaster:{} " +
                                 "enqPutQueue:{} deqGetQueue:{} deqPutQueue:{} allCongestNum:{} enqExpiredStoreTime:{}",
@@ -1614,8 +1639,11 @@ public class TimerMessageStore {
                             enqueuePutQueue.size(), dequeueGetQueue.size(), dequeuePutQueue.size(), getAllCongestNum(), format(lastEnqueueButExpiredStoreTime));
                     }
                     timerMetrics.persist();
+
+                    // note 默认1000（1s。执行完之后在停一段时间
                     waitForRunning(storeConfig.getTimerFlushIntervalMs());
                 } catch (Throwable e) {
+                    // note 吞异常
                     TimerMessageStore.LOGGER.error("Error occurred in " + getServiceName(), e);
                 }
             }
@@ -1685,7 +1713,9 @@ public class TimerMessageStore {
 
     public void prepareTimerCheckPoint() {
         timerCheckpoint.setLastTimerLogFlushPos(timerLog.getMappedFileQueue().getFlushedWhere());
+
         timerCheckpoint.setLastReadTimeMs(commitReadTimeMs);
+
         if (shouldRunningDequeue) {
             timerCheckpoint.setMasterTimerQueueOffset(commitQueueOffset);
             if (commitReadTimeMs != lastCommitReadTimeMs || commitQueueOffset != lastCommitQueueOffset) {
@@ -1694,6 +1724,7 @@ public class TimerMessageStore {
                 lastCommitQueueOffset = commitQueueOffset;
             }
         }
+
         timerCheckpoint.setLastTimerQueueOffset(Math.min(commitQueueOffset, timerCheckpoint.getMasterTimerQueueOffset()));
     }
 

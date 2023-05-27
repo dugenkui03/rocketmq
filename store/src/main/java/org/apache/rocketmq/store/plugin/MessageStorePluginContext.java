@@ -29,6 +29,7 @@ public class MessageStorePluginContext {
     private BrokerStatsManager brokerStatsManager;
     private MessageArrivingListener messageArrivingListener;
     private BrokerConfig brokerConfig;
+
     private final Configuration configuration;
 
     public MessageStorePluginContext(MessageStoreConfig messageStoreConfig,

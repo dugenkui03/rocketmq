@@ -82,6 +82,9 @@ public class RemotingCommand {
         }
     }
 
+    // note SEND_REPLY_MESSAGE_V2 = 325
+    //      RequestCode.SEND_REPLY_MESSAGE
+    //      RequestCode.SEND_MESSAGE
     private int code;
     private LanguageCode language = LanguageCode.JAVA;
     private int version = 0;
@@ -503,6 +506,9 @@ public class RemotingCommand {
         return (this.flag & bits) == bits;
     }
 
+    // note SEND_REPLY_MESSAGE_V2 = 325
+    //      RequestCode.SEND_REPLY_MESSAGE
+    //      RequestCode.SEND_MESSAGE
     public int getCode() {
         return code;
     }
@@ -522,6 +528,7 @@ public class RemotingCommand {
 
     @JSONField(serialize = false)
     public boolean isResponseType() {
+        // 1 是 responseType
         int bits = 1 << RPC_TYPE;
         return (this.flag & bits) == bits;
     }

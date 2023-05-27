@@ -49,6 +49,7 @@ public abstract class ServiceThread implements Runnable {
             return;
         }
         stopped = false;
+        // 给线程命名（标识
         this.thread = new Thread(this, getServiceName());
         this.thread.setDaemon(isDaemon);
         this.thread.start();

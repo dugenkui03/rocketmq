@@ -102,8 +102,8 @@ public abstract class NettyRemotingAbstract {
     protected final NettyEventExecutor nettyEventExecutor = new NettyEventExecutor();
 
     /**
-     * The default request processor to use in case there is no exact match in {@link #processorTable} per request
-     * code.
+     * The default request processor to use
+     * in case there is no exact match in {@link #processorTable} per request code.
      */
     protected Pair<NettyRequestProcessor, ExecutorService> defaultRequestProcessorPair;
 
@@ -166,9 +166,11 @@ public abstract class NettyRemotingAbstract {
     public void processMessageReceived(ChannelHandlerContext ctx, RemotingCommand msg) {
         if (msg != null) {
             switch (msg.getType()) {
+                // note 请求
                 case REQUEST_COMMAND:
                     processRequestCommand(ctx, msg);
                     break;
+                // note 响应
                 case RESPONSE_COMMAND:
                     processResponseCommand(ctx, msg);
                     break;
@@ -246,7 +248,13 @@ public abstract class NettyRemotingAbstract {
      */
     public void processRequestCommand(final ChannelHandlerContext ctx, final RemotingCommand cmd) {
         final Pair<NettyRequestProcessor, ExecutorService> matched = this.processorTable.get(cmd.getCode());
-        final Pair<NettyRequestProcessor, ExecutorService> pair = null == matched ? this.defaultRequestProcessorPair : matched;
+
+        // note 通过 RemotingCommand 的 code 指定 NettyRequestProcessor
+        final Pair<NettyRequestProcessor, ExecutorService> pair =
+                null == matched
+                        ? this.defaultRequestProcessorPair
+                        : matched;
+
         final int opaque = cmd.getOpaque();
 
         if (pair == null) {

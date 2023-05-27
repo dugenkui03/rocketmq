@@ -254,6 +254,8 @@ public class MQClientAPIImpl implements NameServerUpdateCallback {
         }
         this.remotingClient.registerRPCHook(rpcHook);
         this.remotingClient.registerRPCHook(new DynamicalExtFieldRPCHook());
+
+
         this.remotingClient.registerProcessor(RequestCode.CHECK_TRANSACTION_STATE, this.clientRemotingProcessor, null);
 
         this.remotingClient.registerProcessor(RequestCode.NOTIFY_CONSUMER_IDS_CHANGED, this.clientRemotingProcessor, null);
@@ -547,6 +549,7 @@ public class MQClientAPIImpl implements NameServerUpdateCallback {
         return sendMessage(addr, brokerName, msg, requestHeader, timeoutMillis, communicationMode, null, null, null, 0, context, producer);
     }
 
+    // note 重点 发送消息
     public SendResult sendMessage(
         final String addr,
         final String brokerName,
@@ -580,6 +583,8 @@ public class MQClientAPIImpl implements NameServerUpdateCallback {
                 request = RemotingCommand.createRequestCommand(RequestCode.SEND_MESSAGE, requestHeader);
             }
         }
+
+        // note 设置消息数据
         request.setBody(msg.getBody());
 
         switch (communicationMode) {

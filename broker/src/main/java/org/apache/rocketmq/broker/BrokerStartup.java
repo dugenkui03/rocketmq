@@ -217,8 +217,10 @@ public class BrokerStartup {
         MixAll.printObjectProperties(log, nettyClientConfig);
         MixAll.printObjectProperties(log, messageStoreConfig);
 
+        // note 通过配置文件创建 BrokerController
         final BrokerController controller = new BrokerController(
-            brokerConfig, nettyServerConfig, nettyClientConfig, messageStoreConfig);
+            brokerConfig, nettyServerConfig, nettyClientConfig, messageStoreConfig
+        );
 
         // Remember all configs to prevent discard
         controller.getConfiguration().registerConfig(properties);
@@ -249,13 +251,19 @@ public class BrokerStartup {
 
     public static BrokerController createBrokerController(String[] args) {
         try {
+            // 通过配置文件和参数创建 BrokerController 对象
             BrokerController controller = buildBrokerController(args);
+
+            // note 重点 初始化 controller，初始化失败则推出
             boolean initResult = controller.initialize();
             if (!initResult) {
                 controller.shutdown();
                 System.exit(-3);
             }
-            Runtime.getRuntime().addShutdownHook(new Thread(buildShutdownHook(controller)));
+
+            // 退出函数
+            Runnable shutdownHook = buildShutdownHook(controller);
+            Runtime.getRuntime().addShutdownHook(new Thread(shutdownHook));
             return controller;
         } catch (Throwable e) {
             e.printStackTrace();

@@ -60,7 +60,7 @@ import org.apache.rocketmq.store.ha.autoswitch.TempBrokerMetadata;
 import static org.apache.rocketmq.remoting.protocol.ResponseCode.CONTROLLER_BROKER_METADATA_NOT_EXIST;
 
 /**
- * The manager of broker replicas, including: 0.regularly syncing controller metadata, change controller leader address,
+ * The manager of broker replicas（复制）, including: 0.regularly syncing controller metadata, change controller leader address,
  * both master and slave will start this timed task. 1.regularly syncing metadata from controllers, and changing broker
  * roles and master if needed, both master and slave will start this timed task. 2.regularly expanding and Shrinking
  * syncStateSet, only master will start this timed task.
