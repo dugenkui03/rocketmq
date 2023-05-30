@@ -79,6 +79,7 @@ public class ClientConfig {
      */
     protected boolean enableStreamRequestType = false;
 
+    // note id 的格式： ip@hostName@uniNameValue@0
     public String buildMQClientId() {
         StringBuilder sb = new StringBuilder();
         sb.append(this.getClientIP());

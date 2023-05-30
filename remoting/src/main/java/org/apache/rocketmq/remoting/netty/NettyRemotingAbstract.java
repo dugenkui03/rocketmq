@@ -267,6 +267,7 @@ public abstract class NettyRemotingAbstract {
             return;
         }
 
+        // note
         Runnable run = buildProcessRequestHandler(ctx, cmd, pair, opaque);
 
         if (pair.getObject1().rejectRequest()) {
@@ -318,6 +319,7 @@ public abstract class NettyRemotingAbstract {
                 }
 
                 if (exception == null) {
+                    // note
                     response = pair.getObject1().processRequest(ctx, cmd);
                 } else {
                     response = RemotingCommand.createResponseCommand(RemotingSysResponseCode.SYSTEM_ERROR, null);

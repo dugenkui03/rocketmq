@@ -109,7 +109,9 @@ public class LocalMessageService implements MessageService {
         channel.registerInvocationContext(request.getOpaque(), invocationContext);
         ChannelHandlerContext simpleChannelHandlerContext = channel.getChannelHandlerContext();
         try {
-            RemotingCommand response = brokerController.getSendMessageProcessor().processRequest(simpleChannelHandlerContext, request);
+            RemotingCommand response = brokerController.getSendMessageProcessor()
+                    // note
+                    .processRequest(simpleChannelHandlerContext, request);
             if (response != null) {
                 invocationContext.handle(response);
                 channel.eraseInvocationContext(request.getOpaque());

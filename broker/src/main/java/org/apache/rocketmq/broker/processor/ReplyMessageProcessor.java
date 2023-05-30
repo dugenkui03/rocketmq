@@ -73,6 +73,7 @@ public class ReplyMessageProcessor extends AbstractSendMessageProcessor {
         mqtraceContext = buildMsgContext(ctx, requestHeader, request);
         this.executeSendMessageHookBefore(mqtraceContext);
 
+        // note
         RemotingCommand response = this.processReplyMessageRequest(ctx, request, mqtraceContext, requestHeader);
 
         this.executeSendMessageHookAfter(response, mqtraceContext);
@@ -103,7 +104,7 @@ public class ReplyMessageProcessor extends AbstractSendMessageProcessor {
     }
 
     private RemotingCommand processReplyMessageRequest(final ChannelHandlerContext ctx,
-        final RemotingCommand request,
+        final RemotingCommand request, // note
         final SendMessageContext sendMessageContext,
         final SendMessageRequestHeader requestHeader) {
         final RemotingCommand response = RemotingCommand.createResponseCommand(SendMessageResponseHeader.class);
@@ -142,6 +143,7 @@ public class ReplyMessageProcessor extends AbstractSendMessageProcessor {
         msgInner.setQueueId(queueIdInt);
         msgInner.setBody(body);
         msgInner.setFlag(requestHeader.getFlag());
+        // note 更新设置属性值
         MessageAccessor.setProperties(msgInner, MessageDecoder.string2messageProperties(requestHeader.getProperties()));
         msgInner.setPropertiesString(requestHeader.getProperties());
         msgInner.setBornTimestamp(requestHeader.getBornTimestamp());
@@ -149,7 +151,12 @@ public class ReplyMessageProcessor extends AbstractSendMessageProcessor {
         msgInner.setStoreHost(this.getStoreHost());
         msgInner.setReconsumeTimes(requestHeader.getReconsumeTimes() == null ? 0 : requestHeader.getReconsumeTimes());
 
-        PushReplyResult pushReplyResult = this.pushReplyMessage(ctx, requestHeader, msgInner);
+        // note
+        PushReplyResult pushReplyResult = this.pushReplyMessage(
+                ctx,
+                requestHeader,
+                msgInner // 包含clientId
+        );
         this.handlePushReplyResult(pushReplyResult, response, responseHeader, queueIdInt);
 
         if (this.brokerController.getBrokerConfig().isStoreReplyMessageEnable()) {
@@ -184,6 +191,7 @@ public class ReplyMessageProcessor extends AbstractSendMessageProcessor {
         RemotingCommand request = RemotingCommand.createRequestCommand(RequestCode.PUSH_REPLY_MESSAGE_TO_CLIENT, replyMessageRequestHeader);
         request.setBody(msg.getBody());
 
+        // note
         String senderId = msg.getProperties().get(MessageConst.PROPERTY_MESSAGE_REPLY_TO_CLIENT);
         PushReplyResult pushReplyResult = new PushReplyResult(false);
 

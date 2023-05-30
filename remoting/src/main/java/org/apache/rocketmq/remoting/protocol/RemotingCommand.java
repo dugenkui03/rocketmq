@@ -91,11 +91,13 @@ public class RemotingCommand {
     private int opaque = requestId.getAndIncrement();
     private int flag = 0;
     private String remark;
+    // note 扩展字段
     private HashMap<String, String> extFields;
     private transient CommandCustomHeader customHeader;
 
     private SerializeType serializeTypeCurrentRPC = serializeTypeConfigInThisServer;
 
+    // note 保存数据
     private transient byte[] body;
     private boolean suspended;
     private Stopwatch processTimer;

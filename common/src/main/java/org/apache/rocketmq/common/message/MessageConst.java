@@ -51,7 +51,8 @@ public class MessageConst {
     public static final String PROPERTY_TRANSACTION_CHECK_TIMES = "TRANSACTION_CHECK_TIMES";
     public static final String PROPERTY_INSTANCE_ID = "INSTANCE_ID";
     public static final String PROPERTY_CORRELATION_ID = "CORRELATION_ID";
-    public static final String PROPERTY_MESSAGE_REPLY_TO_CLIENT = "REPLY_TO_CLIENT";
+    // note
+    public static final String PROPERTY_MESSAGE_REPLY_TO_CLIENT = "REPLY_TO_CLIENT"; // 消息属性 properties 中 clientId的key
     public static final String PROPERTY_MESSAGE_TTL = "TTL";
     public static final String PROPERTY_REPLY_MESSAGE_ARRIVE_TIME = "ARRIVE_TIME";
     public static final String PROPERTY_PUSH_REPLY_TIME = "PUSH_REPLY_TIME";
