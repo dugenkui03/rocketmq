@@ -226,6 +226,8 @@ import static org.apache.rocketmq.remoting.protocol.RemotingSysResponseCode.SUCC
 
 public class MQClientAPIImpl implements NameServerUpdateCallback {
     private final static Logger log = LoggerFactory.getLogger(MQClientAPIImpl.class);
+
+    // 字段是否简化压缩，默认为true
     private static boolean sendSmartMsg =
         Boolean.parseBoolean(System.getProperty("org.apache.rocketmq.client.sendSmartMsg", "true"));
 
@@ -576,6 +578,7 @@ public class MQClientAPIImpl implements NameServerUpdateCallback {
                 request = RemotingCommand.createRequestCommand(RequestCode.SEND_REPLY_MESSAGE, requestHeader);
             }
         } else {
+            // note 发送消息走到这里？
             if (sendSmartMsg || msg instanceof MessageBatch) {
                 SendMessageRequestHeaderV2 requestHeaderV2 = SendMessageRequestHeaderV2.createSendMessageRequestHeaderV2(requestHeader);
                 request = RemotingCommand.createRequestCommand(msg instanceof MessageBatch ? RequestCode.SEND_BATCH_MESSAGE : RequestCode.SEND_MESSAGE_V2, requestHeaderV2);

@@ -307,10 +307,12 @@ public class SendMessageProcessor extends AbstractSendMessageProcessor implement
             queueIdInt = randomQueueId(topicConfig.getWriteQueueNums());
         }
 
+        // 构造要存储的消息对象
         MessageExtBrokerInner msgInner = new MessageExtBrokerInner();
         msgInner.setTopic(requestHeader.getTopic());
         msgInner.setQueueId(queueIdInt);
 
+        // 获取属性信息
         Map<String, String> oriProps = MessageDecoder.string2messageProperties(requestHeader.getProperties());
         // note 如果达到最大重试次数，则进入死信队列
         if (!handleRetryAndDLQ(requestHeader, response, request, msgInner, topicConfig, oriProps)) {
@@ -346,7 +348,6 @@ public class SendMessageProcessor extends AbstractSendMessageProcessor implement
 
         msgInner.setPropertiesString(MessageDecoder.messageProperties2String(msgInner.getProperties()));
 
-        // Map<String, String> oriProps = MessageDecoder.string2messageProperties(requestHeader.getProperties());
         String traFlag = oriProps.get(MessageConst.PROPERTY_TRANSACTION_PREPARED);
 
         // note 如果是事务消息
@@ -368,12 +369,13 @@ public class SendMessageProcessor extends AbstractSendMessageProcessor implement
 
         // note 如果是异步发送？默认为true
         if (brokerController.getBrokerConfig().isAsyncSendEnable()) {
-            CompletableFuture<PutMessageResult> asyncPutMessageFuture;
-
             // note
+            CompletableFuture<PutMessageResult> asyncPutMessageFuture;
+            // 如果是事务消息
             if (sendTransactionPrepareMessage) {
                 asyncPutMessageFuture = this.brokerController.getTransactionalMessageService().asyncPrepareMessage(msgInner);
             } else {
+                // note 非事务消息
                 asyncPutMessageFuture = this.brokerController.getMessageStore().asyncPutMessage(msgInner);
             }
 

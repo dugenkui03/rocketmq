@@ -93,6 +93,8 @@ public class RemotingCommand {
     private String remark;
     // note 扩展字段
     private HashMap<String, String> extFields;
+    // note 自定义的头文件
+    // fixme 看下发送消息的时候是怎么设置值的
     private transient CommandCustomHeader customHeader;
 
     private SerializeType serializeTypeCurrentRPC = serializeTypeConfigInThisServer;
@@ -126,6 +128,7 @@ public class RemotingCommand {
         if (configVersion >= 0) {
             cmd.setVersion(configVersion);
         } else {
+            // 当前系统版本
             String v = System.getProperty(REMOTING_VERSION_KEY);
             if (v != null) {
                 int value = Integer.parseInt(v);
@@ -151,8 +154,7 @@ public class RemotingCommand {
         return buildErrorResponse(code, remark, null);
     }
 
-    public static RemotingCommand createResponseCommand(int code, String remark,
-        Class<? extends CommandCustomHeader> classHeader) {
+    public static RemotingCommand createResponseCommand(int code, String remark, Class<? extends CommandCustomHeader> classHeader) {
         RemotingCommand cmd = new RemotingCommand();
         cmd.markResponseType();
         cmd.setCode(code);
@@ -252,7 +254,10 @@ public class RemotingCommand {
     }
 
     public void markResponseType() {
+        // bits is 10
         int bits = 1 << RPC_TYPE;
+        // | 是有 1 得 1
+        // flag = flag | 10，留下 flag的第二位，2或者0
         this.flag |= bits;
     }
 
@@ -264,13 +269,14 @@ public class RemotingCommand {
         this.customHeader = customHeader;
     }
 
-    public CommandCustomHeader decodeCommandCustomHeader(
-        Class<? extends CommandCustomHeader> classHeader) throws RemotingCommandException {
+    public CommandCustomHeader decodeCommandCustomHeader(Class<? extends CommandCustomHeader> classHeader) throws RemotingCommandException {
         return decodeCommandCustomHeader(classHeader, true);
     }
 
-    public CommandCustomHeader decodeCommandCustomHeader(Class<? extends CommandCustomHeader> classHeader,
-        boolean useFastEncode) throws RemotingCommandException {
+    public CommandCustomHeader decodeCommandCustomHeader(Class<? extends CommandCustomHeader> classHeader, // header 类型
+                                                         boolean useFastEncode) // 默认为true
+            throws RemotingCommandException {
+
         CommandCustomHeader objectHeader;
         try {
             objectHeader = classHeader.getDeclaredConstructor().newInstance();

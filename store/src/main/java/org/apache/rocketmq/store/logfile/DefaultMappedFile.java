@@ -309,6 +309,8 @@ public class DefaultMappedFile extends AbstractMappedFile {
         int currentPos = WROTE_POSITION_UPDATER.get(this);
 
         if (currentPos < this.fileSize) {
+
+            // note
             ByteBuffer byteBuffer = appendMessageBuffer().slice();
             // note 啥意思
             byteBuffer.position(currentPos);

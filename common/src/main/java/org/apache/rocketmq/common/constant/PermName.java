@@ -24,6 +24,7 @@ public class PermName {
 
 
     public static final int PERM_PRIORITY = 0x1 << INDEX_PERM_PRIORITY;
+    // 100 ｜ 10 = 110
     public static final int PERM_READ = 0x1 << INDEX_PERM_READ;
     public static final int PERM_WRITE = 0x1 << INDEX_PERM_WRITE;
     public static final int PERM_INHERIT = 0x1 << INDEX_PERM_INHERIT;
@@ -45,6 +46,8 @@ public class PermName {
         return sb.toString();
     }
 
+    // note PERM_READ 是 110
+    //      所以 perm 11x 至少是1
     public static boolean isReadable(final int perm) {
         return (perm & PERM_READ) == PERM_READ;
     }

@@ -312,6 +312,8 @@ public class BrokerController {
                 : new TopicConfigManager(this);
 
         this.topicQueueMappingManager = new TopicQueueMappingManager(this);
+
+        // note processor
         this.pullMessageProcessor = new PullMessageProcessor(this);
         this.peekMessageProcessor = new PeekMessageProcessor(this);
         this.pullRequestHoldService = messageStoreConfig.isEnableLmq() ? new LmqPullRequestHoldService(this) : new PullRequestHoldService(this);
@@ -319,6 +321,8 @@ public class BrokerController {
         this.notificationProcessor = new NotificationProcessor(this);
         this.pollingInfoProcessor = new PollingInfoProcessor(this);
         this.ackMessageProcessor = new AckMessageProcessor(this);
+
+
         this.changeInvisibleTimeProcessor = new ChangeInvisibleTimeProcessor(this);
         this.sendMessageProcessor = new SendMessageProcessor(this);
         this.replyMessageProcessor = new ReplyMessageProcessor(this);
