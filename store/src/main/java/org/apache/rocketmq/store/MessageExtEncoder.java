@@ -33,17 +33,28 @@ import java.nio.ByteBuffer;
 
 public class MessageExtEncoder {
     protected static final Logger log = LoggerFactory.getLogger(LoggerName.STORE_LOGGER_NAME);
+
     private ByteBuf byteBuf;
+
+    // note 消息body最大的长度
     // The maximum length of the message body.
     private int maxMessageBodySize;
+
+    // note 消息最大的长度
     // The maximum length of the full message.
     private int maxMessageSize;
+
     public MessageExtEncoder(final int maxMessageBodySize) {
         ByteBufAllocator alloc = UnpooledByteBufAllocator.DEFAULT;
+
         //Reserve 64kb for encoding buffer outside body
-        int maxMessageSize = Integer.MAX_VALUE - maxMessageBodySize >= 64 * 1024 ?
-            maxMessageBodySize + 64 * 1024 : Integer.MAX_VALUE;
+        int maxMessageSize = Integer.MAX_VALUE - maxMessageBodySize >= 64 * 1024
+                ? maxMessageBodySize + 64 * 1024  // 消息body最大的长度 + 64kb，64kb是什么
+                : Integer.MAX_VALUE;
+
+        // 为消息分配空间
         byteBuf = alloc.directBuffer(maxMessageSize);
+
         this.maxMessageBodySize = maxMessageBodySize;
         this.maxMessageSize = maxMessageSize;
     }
@@ -75,11 +86,15 @@ public class MessageExtEncoder {
 
     public PutMessageResult encode(MessageExtBrokerInner msgInner) {
         this.byteBuf.clear();
+
         /**
          * Serialize message
          */
-        final byte[] propertiesData =
-            msgInner.getPropertiesString() == null ? null : msgInner.getPropertiesString().getBytes(MessageDecoder.CHARSET_UTF8);
+
+        // 属性消息
+        final byte[] propertiesData = msgInner.getPropertiesString() == null
+                ? null :
+                msgInner.getPropertiesString().getBytes(MessageDecoder.CHARSET_UTF8);
 
         final int propertiesLength = propertiesData == null ? 0 : propertiesData.length;
 
@@ -88,12 +103,21 @@ public class MessageExtEncoder {
             return new PutMessageResult(PutMessageStatus.PROPERTIES_SIZE_EXCEEDED, null);
         }
 
+        // topic
         final byte[] topicData = msgInner.getTopic().getBytes(MessageDecoder.CHARSET_UTF8);
         final int topicLength = topicData.length;
 
+        // body
         final int bodyLength = msgInner.getBody() == null ? 0 : msgInner.getBody().length;
+
+        // note 计算消息长度（不是body
         final int msgLen = calMsgLength(
-            msgInner.getVersion(), msgInner.getSysFlag(), bodyLength, topicLength, propertiesLength);
+                msgInner.getVersion(),
+                msgInner.getSysFlag(),
+                bodyLength,
+                topicLength,
+                propertiesLength
+        );
 
         // Exceeds the maximum message body
         if (bodyLength > this.maxMessageBodySize) {
@@ -293,6 +317,7 @@ public class MessageExtEncoder {
         return this.maxMessageBodySize;
     }
 
+    // note 如果是异步调用则需要更新字段的修饰
     public void updateEncoderBufferCapacity(int newMaxMessageBodySize) {
         this.maxMessageBodySize = newMaxMessageBodySize;
         //Reserve 64kb for encoding buffer outside body

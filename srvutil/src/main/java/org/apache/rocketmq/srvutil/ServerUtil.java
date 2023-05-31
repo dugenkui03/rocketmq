@@ -27,16 +27,18 @@ import org.apache.commons.cli.ParseException;
 public class ServerUtil {
 
     public static Options buildCommandlineOptions(final Options options) {
-        Option opt = new Option("h", "help", false, "Print help");
-        opt.setRequired(false);
-        options.addOption(opt);
+        Option helpOpt = new Option("h", "help", false, "Print help");
+        helpOpt.setRequired(false);
 
-        opt =
-            new Option("n", "namesrvAddr", true,
-                "Name server address list, eg: '192.168.0.1:9876;192.168.0.2:9876'");
-        opt.setRequired(false);
-        options.addOption(opt);
+        Option nameOpt = new Option("n",
+                "namesrvAddr",
+                true,
+                "Name server address list, eg: '192.168.0.1:9876;192.168.0.2:9876'"
+        );
+        nameOpt.setRequired(false);
 
+        options.addOption(helpOpt);
+        options.addOption(nameOpt);
         return options;
     }
 

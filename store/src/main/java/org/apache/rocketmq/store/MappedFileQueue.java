@@ -43,8 +43,10 @@ public class MappedFileQueue implements Swappable {
 
     protected final String storePath;
 
+    // note 默认 1 G
     protected final int mappedFileSize;
 
+    // note 重要 保存 MapFile 信息
     protected final CopyOnWriteArrayList<MappedFile> mappedFiles = new CopyOnWriteArrayList<>();
 
     protected final AllocateMappedFileService allocateMappedFileService;
@@ -54,8 +56,7 @@ public class MappedFileQueue implements Swappable {
 
     protected volatile long storeTimestamp = 0;
 
-    public MappedFileQueue(final String storePath, int mappedFileSize,
-        AllocateMappedFileService allocateMappedFileService) {
+    public MappedFileQueue(final String storePath, int mappedFileSize, AllocateMappedFileService allocateMappedFileService) {
         this.storePath = storePath;
         this.mappedFileSize = mappedFileSize;
         this.allocateMappedFileService = allocateMappedFileService;
@@ -302,6 +303,7 @@ public class MappedFileQueue implements Swappable {
         }
 
         if (createOffset != -1 && needCreate) {
+            // 走到这里时的情况
             return tryCreateMappedFile(createOffset);
         }
 
@@ -345,10 +347,14 @@ public class MappedFileQueue implements Swappable {
         MappedFile mappedFile = null;
 
         if (this.allocateMappedFileService != null) {
-            mappedFile = this.allocateMappedFileService.putRequestAndReturnMappedFile(nextFilePath,
-                    nextNextFilePath, this.mappedFileSize);
+            mappedFile = this.allocateMappedFileService.putRequestAndReturnMappedFile(
+                    nextFilePath,
+                    nextNextFilePath,
+                    this.mappedFileSize
+            );
         } else {
             try {
+                //  this.fileChannel.map(MapMode.READ_WRITE, 0, fileSize);
                 mappedFile = new DefaultMappedFile(nextFilePath, this.mappedFileSize);
             } catch (IOException e) {
                 log.error("create mappedFile exception", e);
@@ -357,8 +363,10 @@ public class MappedFileQueue implements Swappable {
 
         if (mappedFile != null) {
             if (this.mappedFiles.isEmpty()) {
+                // mappedFile 是否是 mappedFiles 的第一个 MappedFile
                 mappedFile.setFirstCreateInQueue(true);
             }
+            // note 将创建的 MappedFile 放到 CopyOnWriteArrayList<MappedFile> 中
             this.mappedFiles.add(mappedFile);
         }
 
@@ -369,6 +377,7 @@ public class MappedFileQueue implements Swappable {
         return getLastMappedFile(startOffset, true);
     }
 
+    // note 考虑到第一次调用的时候 mappedFiles 可能为空
     public MappedFile getLastMappedFile() {
         MappedFile[] mappedFiles = this.mappedFiles.toArray(new MappedFile[0]);
         return mappedFiles.length == 0 ? null : mappedFiles[mappedFiles.length - 1];
@@ -421,7 +430,8 @@ public class MappedFileQueue implements Swappable {
     public long getMaxOffset() {
         MappedFile mappedFile = getLastMappedFile();
         if (mappedFile != null) {
-            return mappedFile.getFileFromOffset() + mappedFile.getReadPosition();
+            return mappedFile.getFileFromOffset() // note MappedFile 的偏移量，是 MappedFile 的文件名称
+                    + mappedFile.getReadPosition(); // note 当前 MappedFile 的最大可读取位置
         }
         return 0;
     }

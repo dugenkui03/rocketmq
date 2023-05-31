@@ -226,6 +226,8 @@ import static org.apache.rocketmq.remoting.protocol.RemotingSysResponseCode.SUCC
 
 public class MQClientAPIImpl implements NameServerUpdateCallback {
     private final static Logger log = LoggerFactory.getLogger(MQClientAPIImpl.class);
+
+    // 字段是否简化压缩，默认为true
     private static boolean sendSmartMsg =
         Boolean.parseBoolean(System.getProperty("org.apache.rocketmq.client.sendSmartMsg", "true"));
 
@@ -254,6 +256,8 @@ public class MQClientAPIImpl implements NameServerUpdateCallback {
         }
         this.remotingClient.registerRPCHook(rpcHook);
         this.remotingClient.registerRPCHook(new DynamicalExtFieldRPCHook());
+
+
         this.remotingClient.registerProcessor(RequestCode.CHECK_TRANSACTION_STATE, this.clientRemotingProcessor, null);
 
         this.remotingClient.registerProcessor(RequestCode.NOTIFY_CONSUMER_IDS_CHANGED, this.clientRemotingProcessor, null);
@@ -547,6 +551,7 @@ public class MQClientAPIImpl implements NameServerUpdateCallback {
         return sendMessage(addr, brokerName, msg, requestHeader, timeoutMillis, communicationMode, null, null, null, 0, context, producer);
     }
 
+    // note 重点 发送消息
     public SendResult sendMessage(
         final String addr,
         final String brokerName,
@@ -573,6 +578,7 @@ public class MQClientAPIImpl implements NameServerUpdateCallback {
                 request = RemotingCommand.createRequestCommand(RequestCode.SEND_REPLY_MESSAGE, requestHeader);
             }
         } else {
+            // note 发送消息走到这里？
             if (sendSmartMsg || msg instanceof MessageBatch) {
                 SendMessageRequestHeaderV2 requestHeaderV2 = SendMessageRequestHeaderV2.createSendMessageRequestHeaderV2(requestHeader);
                 request = RemotingCommand.createRequestCommand(msg instanceof MessageBatch ? RequestCode.SEND_BATCH_MESSAGE : RequestCode.SEND_MESSAGE_V2, requestHeaderV2);
@@ -580,6 +586,8 @@ public class MQClientAPIImpl implements NameServerUpdateCallback {
                 request = RemotingCommand.createRequestCommand(RequestCode.SEND_MESSAGE, requestHeader);
             }
         }
+
+        // note 设置消息数据
         request.setBody(msg.getBody());
 
         switch (communicationMode) {

@@ -31,6 +31,7 @@ import org.apache.rocketmq.broker.filter.ExpressionMessageFilter;
 import org.apache.rocketmq.broker.mqtrace.ConsumeMessageContext;
 import org.apache.rocketmq.broker.mqtrace.ConsumeMessageHook;
 import org.apache.rocketmq.broker.plugin.PullMessageResultHandler;
+import org.apache.rocketmq.broker.topic.TopicQueueMappingManager;
 import org.apache.rocketmq.common.MixAll;
 import org.apache.rocketmq.common.TopicConfig;
 import org.apache.rocketmq.common.constant.LoggerName;
@@ -86,7 +87,7 @@ public class PullMessageProcessor implements NettyRequestProcessor {
     }
 
     private RemotingCommand rewriteRequestForStaticTopic(PullMessageRequestHeader requestHeader,
-        TopicQueueMappingContext mappingContext) {
+                                                         TopicQueueMappingContext mappingContext) {
         try {
             if (mappingContext.getMappingDetail() == null) {
                 return null;
@@ -281,8 +282,7 @@ public class PullMessageProcessor implements NettyRequestProcessor {
     }
 
     @Override
-    public RemotingCommand processRequest(final ChannelHandlerContext ctx,
-        RemotingCommand request) throws RemotingCommandException {
+    public RemotingCommand processRequest(final ChannelHandlerContext ctx, RemotingCommand request) throws RemotingCommandException {
         return this.processRequest(ctx.channel(), request, true);
     }
 
@@ -295,17 +295,25 @@ public class PullMessageProcessor implements NettyRequestProcessor {
         return false;
     }
 
-    private RemotingCommand processRequest(final Channel channel, RemotingCommand request, boolean brokerAllowSuspend)
-        throws RemotingCommandException {
+    private RemotingCommand processRequest(final Channel channel,
+                                           RemotingCommand request,
+                                           boolean brokerAllowSuspend) throws RemotingCommandException {
+        // note 响应头
         RemotingCommand response = RemotingCommand.createResponseCommand(PullMessageResponseHeader.class);
         final PullMessageResponseHeader responseHeader = (PullMessageResponseHeader) response.readCustomHeader();
+
+        // note 请求头
         final PullMessageRequestHeader requestHeader =
             (PullMessageRequestHeader) request.decodeCommandCustomHeader(PullMessageRequestHeader.class);
 
+        // note 请求的唯一标识
         response.setOpaque(request.getOpaque());
 
         LOGGER.debug("receive PullMessage request command, {}", request);
 
+        // note 鉴权
+        // permission = 110
+        // todo 通过 this.brokerController.getBrokerConfig().setBrokerPermission 来禁用当前broker？
         if (!PermName.isReadable(this.brokerController.getBrokerConfig().getBrokerPermission())) {
             response.setCode(ResponseCode.NO_PERMISSION);
             responseHeader.setForbiddenType(ForbiddenType.BROKER_FORBIDDEN);
@@ -314,6 +322,10 @@ public class PullMessageProcessor implements NettyRequestProcessor {
             return response;
         }
 
+        // 消息的类型
+        // note SEND_REPLY_MESSAGE_V2 = 325
+        //      RequestCode.SEND_REPLY_MESSAGE
+        //      RequestCode.SEND_MESSAGE
         if (request.getCode() == RequestCode.LITE_PULL_MESSAGE && !this.brokerController.getBrokerConfig().isLitePullMessageEnable()) {
             response.setCode(ResponseCode.NO_PERMISSION);
             responseHeader.setForbiddenType(ForbiddenType.BROKER_FORBIDDEN);
@@ -322,14 +334,17 @@ public class PullMessageProcessor implements NettyRequestProcessor {
             return response;
         }
 
+
+        // todo SubscriptionGroupConfig
         SubscriptionGroupConfig subscriptionGroupConfig =
-            this.brokerController.getSubscriptionGroupManager().findSubscriptionGroupConfig(requestHeader.getConsumerGroup());
+                this.brokerController.
+                        getSubscriptionGroupManager().
+                        findSubscriptionGroupConfig(requestHeader.getConsumerGroup());
         if (null == subscriptionGroupConfig) {
             response.setCode(ResponseCode.SUBSCRIPTION_GROUP_NOT_EXIST);
             response.setRemark(String.format("subscription group [%s] does not exist, %s", requestHeader.getConsumerGroup(), FAQUrl.suggestTodo(FAQUrl.SUBSCRIPTION_GROUP_NOT_EXIST)));
             return response;
         }
-
         if (!subscriptionGroupConfig.isConsumeEnable()) {
             response.setCode(ResponseCode.NO_PERMISSION);
             responseHeader.setForbiddenType(ForbiddenType.GROUP_FORBIDDEN);
@@ -337,10 +352,12 @@ public class PullMessageProcessor implements NettyRequestProcessor {
             return response;
         }
 
+        // note ConcurrentMap<String, TopicConfig> topicConfigTable 获取 topicConfig 配置
         TopicConfig topicConfig = this.brokerController.getTopicConfigManager().selectTopicConfig(requestHeader.getTopic());
         if (null == topicConfig) {
             LOGGER.error("the topic {} not exist, consumer: {}", requestHeader.getTopic(), RemotingHelper.parseChannelRemoteAddr(channel));
             response.setCode(ResponseCode.TOPIC_NOT_EXIST);
+            // 创建主题的说明连接
             response.setRemark(String.format("topic[%s] not exist, apply first please! %s", requestHeader.getTopic(), FAQUrl.suggestTodo(FAQUrl.APPLY_TOPIC_URL)));
             return response;
         }
@@ -352,15 +369,16 @@ public class PullMessageProcessor implements NettyRequestProcessor {
             return response;
         }
 
-        TopicQueueMappingContext mappingContext = this.brokerController.getTopicQueueMappingManager().buildTopicQueueMappingContext(requestHeader, false);
+        TopicQueueMappingManager topicQueueMappingManager = this.brokerController.getTopicQueueMappingManager();
+        TopicQueueMappingContext mappingContext = topicQueueMappingManager.buildTopicQueueMappingContext(requestHeader, false);
 
-        {
-            RemotingCommand rewriteResult = rewriteRequestForStaticTopic(requestHeader, mappingContext);
-            if (rewriteResult != null) {
-                return rewriteResult;
-            }
+        // todo 这是啥？
+        RemotingCommand rewriteResult = rewriteRequestForStaticTopic(requestHeader, mappingContext);
+        if (rewriteResult != null) {
+            return rewriteResult;
         }
 
+        // 校验
         if (requestHeader.getQueueId() < 0 || requestHeader.getQueueId() >= topicConfig.getReadQueueNums()) {
             String errorInfo = String.format("queueId[%d] is illegal, topic:[%s] topicConfig.readQueueNums:[%d] consumer:[%s]",
                 requestHeader.getQueueId(), requestHeader.getTopic(), topicConfig.getReadQueueNums(), channel.remoteAddress());
@@ -483,13 +501,13 @@ public class PullMessageProcessor implements NettyRequestProcessor {
                 this.brokerController.getConsumerFilterManager());
         }
 
-        final MessageStore messageStore = brokerController.getMessageStore();
-        final boolean useResetOffsetFeature = brokerController.getBrokerConfig().isUseServerSideResetOffset();
         String topic = requestHeader.getTopic();
         String group = requestHeader.getConsumerGroup();
         int queueId = requestHeader.getQueueId();
         Long resetOffset = brokerController.getConsumerOffsetManager().queryThenEraseResetOffset(topic, group, queueId);
 
+        final MessageStore messageStore = brokerController.getMessageStore();
+        final boolean useResetOffsetFeature = brokerController.getBrokerConfig().isUseServerSideResetOffset();
         GetMessageResult getMessageResult = null;
         if (useResetOffsetFeature && null != resetOffset) {
             getMessageResult = new GetMessageResult();
@@ -623,6 +641,7 @@ public class PullMessageProcessor implements NettyRequestProcessor {
 
         if (this.brokerController.getBrokerConfig().isSlaveReadEnable() && !this.brokerController.getBrokerConfig().isInBrokerContainer()) {
             // consume too slow ,redirect to another machine
+            // note "？消费太慢、消费其他broker？"
             if (getMessageResult.isSuggestPullingFromSlave()) {
                 responseHeader.setSuggestWhichBrokerId(subscriptionGroupConfig.getWhichBrokerWhenConsumeSlowly());
             }

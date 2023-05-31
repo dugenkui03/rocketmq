@@ -354,7 +354,7 @@ public class MixAll {
                 try {
                     String tmp = mn.substring(4);
                     String first = mn.substring(3, 4);
-
+                    // note 字段名称
                     String key = first.toLowerCase() + tmp;
                     String property = p.getProperty(key);
                     if (property != null) {
@@ -375,6 +375,7 @@ public class MixAll {
                             } else if (cn.equals("String")) {
                                 arg = property;
                             } else {
+                                // todo 这里
                                 continue;
                             }
                             method.invoke(object, arg);

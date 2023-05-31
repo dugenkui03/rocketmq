@@ -76,6 +76,7 @@ public class TopicQueueMappingContext  {
         this.mappingItemList = mappingItemList;
     }
 
+    // note 获取lead节点？
     public LogicQueueMappingItem getLeaderItem() {
         return leaderItem;
     }

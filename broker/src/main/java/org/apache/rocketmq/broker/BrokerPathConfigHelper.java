@@ -55,6 +55,7 @@ public class BrokerPathConfigHelper {
         return rootDir + File.separator + "config" + File.separator + "subscriptionGroup.json";
     }
     public static String getTimerCheckPath(final String rootDir) {
+        // xx/yy/zz/config/timercheck
         return rootDir + File.separator + "config" + File.separator + "timercheck";
     }
     public static String getTimerMetricsPath(final String rootDir) {

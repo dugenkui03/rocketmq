@@ -56,6 +56,7 @@ public interface MappedFile {
 
     /**
      * Returns the {@code FileChannel} behind the {@code MappedFile}.
+     * note 读写文件的管道
      *
      * @return the file channel
      */
@@ -72,6 +73,7 @@ public interface MappedFile {
      * Returns true if this {@code MappedFile} is available.
      * <p>
      * The mapped file will be not available if it's shutdown or destroyed.
+     * note 文件是否可用：如果关闭或者 destroyed 则不在可用
      *
      * @return true if the file is available
      */
@@ -128,6 +130,7 @@ public interface MappedFile {
 
     /**
      * Returns the global offset of the current {code MappedFile}, it's a long value of the file name.
+     * note MappedFile 的偏移量，是 MappedFile 的文件名称
      *
      * @return the offset of this file
      */
@@ -302,6 +305,8 @@ public interface MappedFile {
 
     /**
      * Warm up the mapped bytebuffer
+     * note 预热 映射缓存
+     *
      * @param type
      * @param pages
      */

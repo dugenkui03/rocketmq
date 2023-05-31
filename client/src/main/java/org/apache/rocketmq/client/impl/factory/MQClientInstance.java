@@ -89,6 +89,7 @@ public class MQClientInstance {
     private final static long LOCK_TIMEOUT_MILLIS = 3000;
     private final static Logger log = LoggerFactory.getLogger(MQClientInstance.class);
     private final ClientConfig clientConfig;
+    // note 客户端id
     private final String clientId;
     private final long bootTimestamp = System.currentTimeMillis();
 

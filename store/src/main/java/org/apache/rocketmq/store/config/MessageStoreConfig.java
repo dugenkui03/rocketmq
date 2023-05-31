@@ -168,6 +168,7 @@ public class MessageStoreConfig {
     private int flushCommitLogLeastPages = 4;
     // How many pages are to be committed when commit data to file
     private int commitCommitLogLeastPages = 4;
+
     // Flush page size when the disk in warming state
     private int flushLeastPagesWhenWarmMapedFile = 1024 / 4 * 16;
     // How many pages are to be flushed when flush ConsumeQueue
@@ -203,8 +204,14 @@ public class MessageStoreConfig {
     @ImportantField
     private String haMasterAddress = null;
     private int haMaxGapNotInSync = 1024 * 1024 * 256;
+
+    //    ASYNC_MASTER,
+    //    SYNC_MASTER,
+    //    SLAVE;
     @ImportantField
     private volatile BrokerRole brokerRole = BrokerRole.ASYNC_MASTER;
+
+    // note
     @ImportantField
     private FlushDiskType flushDiskType = FlushDiskType.ASYNC_FLUSH;
     // Used by GroupTransferService to sync messages from master to slave
@@ -219,13 +226,17 @@ public class MessageStoreConfig {
     private boolean warmMapedFileEnable = false;
     private boolean offsetCheckInSlave = false;
     private boolean debugLockEnable = false;
+
+    // note 是否允许消息重复？
     private boolean duplicationEnable = false;
     private boolean diskFallRecorded = true;
     private long osPageCacheBusyTimeOutMills = 1000;
     private int defaultQueryMaxNum = 32;
 
+    // 是否使用内存锁、防止文件映射的内存被置换为虚拟内存
     @ImportantField
     private boolean transientStorePoolEnable = false;
+
     private int transientStorePoolSize = 5;
     private boolean fastFailIfNoBufferInStorePool = false;
 
@@ -239,6 +250,7 @@ public class MessageStoreConfig {
 
     private boolean enableScheduleMessageStats = true;
 
+    // https://github.com/apache/rocketmq/blob/develop/docs/cn/Example_LMQ.md
     private boolean enableLmq = false;
     private boolean enableMultiDispatch = false;
     private int maxLmqConsumeQueueNum = 20000;
@@ -398,6 +410,7 @@ public class MessageStoreConfig {
         return duplicationEnable;
     }
 
+    // 服务启动时根据配置文件设置的值
     public void setDuplicationEnable(final boolean duplicationEnable) {
         this.duplicationEnable = duplicationEnable;
     }

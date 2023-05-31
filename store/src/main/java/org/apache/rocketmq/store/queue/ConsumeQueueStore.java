@@ -62,6 +62,8 @@ public class ConsumeQueueStore {
     protected final DefaultMessageStore messageStore;
     protected final MessageStoreConfig messageStoreConfig;
     protected final QueueOffsetAssigner queueOffsetAssigner = new QueueOffsetAssigner();
+
+    // note <topic, <queueId, 消费队列接口>>
     protected final ConcurrentMap<String/* topic */, ConcurrentMap<Integer/* queueId */, ConsumeQueueInterface>> consumeQueueTable;
 
     public ConsumeQueueStore(DefaultMessageStore messageStore, MessageStoreConfig messageStoreConfig) {

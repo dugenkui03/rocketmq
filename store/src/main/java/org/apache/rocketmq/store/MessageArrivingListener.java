@@ -23,6 +23,8 @@ public interface MessageArrivingListener {
 
     /**
      * Notify that a new message arrives in a consume queue
+     * note "消息到达消费队列时被调用"
+     *
      * @param topic topic name
      * @param queueId consume queue id
      * @param logicOffset consume queue offset

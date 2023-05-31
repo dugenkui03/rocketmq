@@ -170,12 +170,13 @@ public class SendMessageRequestHeader extends TopicQueueRequestHeader {
     public static SendMessageRequestHeader parseRequestHeader(RemotingCommand request) throws RemotingCommandException {
         SendMessageRequestHeaderV2 requestHeaderV2 = null;
         SendMessageRequestHeader requestHeader = null;
+
         switch (request.getCode()) {
+            // note 批量发送消息或者 v2 版本消息
             case RequestCode.SEND_BATCH_MESSAGE:
             case RequestCode.SEND_MESSAGE_V2:
                 requestHeaderV2 =
-                    (SendMessageRequestHeaderV2) request
-                        .decodeCommandCustomHeader(SendMessageRequestHeaderV2.class);
+                    (SendMessageRequestHeaderV2) request.decodeCommandCustomHeader(SendMessageRequestHeaderV2.class);
             case RequestCode.SEND_MESSAGE:
                 if (null == requestHeaderV2) {
                     requestHeader =

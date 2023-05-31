@@ -27,10 +27,16 @@ import org.apache.rocketmq.logging.org.slf4j.LoggerFactory;
 import org.apache.rocketmq.store.logfile.DefaultMappedFile;
 import org.apache.rocketmq.store.logfile.MappedFile;
 
+/**
+ * 提供通过key和时间区间消费消息的方法
+ *
+ * note 一个文件大小约为 400M，可索引 2000w 条数据
+ */
 public class IndexFile {
     private static final Logger log = LoggerFactory.getLogger(LoggerName.STORE_LOGGER_NAME);
     private static int hashSlotSize = 4;
     /**
+     * note 每个存储单元的格式
      * Each index's store unit. Format:
      * <pre>
      * ┌───────────────┬───────────────────────────────┬───────────────┬───────────────┐

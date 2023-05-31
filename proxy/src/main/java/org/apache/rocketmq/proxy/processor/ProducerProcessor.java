@@ -90,6 +90,7 @@ public class ProducerProcessor extends AbstractProcessor {
             }
             SendMessageRequestHeader requestHeader = buildSendMessageRequestHeader(messageList, producerGroup, sysFlag, messageQueue.getQueueId());
 
+             // note
             future = this.serviceManager.getMessageService().sendMessage(
                 ctx,
                 messageQueue,

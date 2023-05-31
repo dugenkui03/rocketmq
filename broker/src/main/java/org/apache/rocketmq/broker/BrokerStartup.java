@@ -46,8 +46,10 @@ public class BrokerStartup {
     public static Logger log;
     public static final SystemConfigFileHelper CONFIG_FILE_HELPER = new SystemConfigFileHelper();
 
+    // 重要：启动服务
     public static void main(String[] args) {
-        start(createBrokerController(args));
+        BrokerController brokerController = createBrokerController(args);
+        start(brokerController);
     }
 
     public static BrokerController start(BrokerController controller) {
@@ -80,23 +82,31 @@ public class BrokerStartup {
     }
 
     public static BrokerController buildBrokerController(String[] args) throws Exception {
+        // <rocketmq.remoting.version,版本唯一标识>
         System.setProperty(RemotingCommand.REMOTING_VERSION_KEY, Integer.toString(MQVersion.CURRENT_VERSION));
 
-        final BrokerConfig brokerConfig = new BrokerConfig();
         final NettyServerConfig nettyServerConfig = new NettyServerConfig();
-        final NettyClientConfig nettyClientConfig = new NettyClientConfig();
-        final MessageStoreConfig messageStoreConfig = new MessageStoreConfig();
+        // note magic num 丑
         nettyServerConfig.setListenPort(10911);
 
         Options options = ServerUtil.buildCommandlineOptions(new Options());
+        Options commandlineOptions = buildCommandlineOptions(options);
+        // note 获取用户输入的命令信息
         CommandLine commandLine = ServerUtil.parseCmdLine(
-            "mqbroker", args, buildCommandlineOptions(options), new DefaultParser());
+                "mqbroker",
+                args, // 命令参数
+                commandlineOptions, new DefaultParser()
+        );
+
         if (null == commandLine) {
             System.exit(-1);
         }
 
+        // 用户文件
         Properties properties = null;
+        // 如果命令包含 c
         if (commandLine.hasOption('c')) {
+            // note 获取配置文件名称
             String file = commandLine.getOptionValue('c');
             if (file != null) {
                 CONFIG_FILE_HELPER.setFile(file);
@@ -105,14 +115,20 @@ public class BrokerStartup {
             }
         }
 
+        final BrokerConfig brokerConfig = new BrokerConfig();
+        final NettyClientConfig nettyClientConfig = new NettyClientConfig();
+        final MessageStoreConfig messageStoreConfig = new MessageStoreConfig();
         if (properties != null) {
+            // 根据配置文件设置系统属性 rocketmq.namesrv.domain 和 rocketmq.namesrv.domain.subgroup
             properties2SystemEnv(properties);
+            // note 将配置文件中映射到类同名字段中
             MixAll.properties2Object(properties, brokerConfig);
             MixAll.properties2Object(properties, nettyServerConfig);
             MixAll.properties2Object(properties, nettyClientConfig);
             MixAll.properties2Object(properties, messageStoreConfig);
         }
 
+        // note 输入的属性优先于配置文件中的属性
         MixAll.properties2Object(ServerUtil.commandLine2Properties(commandLine), brokerConfig);
         if (null == brokerConfig.getRocketmqHome()) {
             System.out.printf("Please set the %s variable in your environment " +
@@ -120,7 +136,7 @@ public class BrokerStartup {
             System.exit(-2);
         }
 
-        // Validate namesrvAddr
+        // note 检查配置的 nameServer 地址；Validate namesrvAddr
         String namesrvAddr = brokerConfig.getNamesrvAddr();
         if (StringUtils.isNotBlank(namesrvAddr)) {
             try {
@@ -135,6 +151,7 @@ public class BrokerStartup {
             }
         }
 
+        // 如果是 slave 节点
         if (BrokerRole.SLAVE == messageStoreConfig.getBrokerRole()) {
             int ratio = messageStoreConfig.getAccessMessageInMemoryMaxRatio() - 10;
             messageStoreConfig.setAccessMessageInMemoryMaxRatio(ratio);
@@ -200,8 +217,10 @@ public class BrokerStartup {
         MixAll.printObjectProperties(log, nettyClientConfig);
         MixAll.printObjectProperties(log, messageStoreConfig);
 
+        // note 通过配置文件创建 BrokerController
         final BrokerController controller = new BrokerController(
-            brokerConfig, nettyServerConfig, nettyClientConfig, messageStoreConfig);
+            brokerConfig, nettyServerConfig, nettyClientConfig, messageStoreConfig
+        );
 
         // Remember all configs to prevent discard
         controller.getConfiguration().registerConfig(properties);
@@ -232,13 +251,19 @@ public class BrokerStartup {
 
     public static BrokerController createBrokerController(String[] args) {
         try {
+            // 通过配置文件和参数创建 BrokerController 对象
             BrokerController controller = buildBrokerController(args);
+
+            // note 重点 初始化 controller，初始化失败则推出
             boolean initResult = controller.initialize();
             if (!initResult) {
                 controller.shutdown();
                 System.exit(-3);
             }
-            Runtime.getRuntime().addShutdownHook(new Thread(buildShutdownHook(controller)));
+
+            // 退出函数
+            Runnable shutdownHook = buildShutdownHook(controller);
+            Runtime.getRuntime().addShutdownHook(new Thread(shutdownHook));
             return controller;
         } catch (Throwable e) {
             e.printStackTrace();
@@ -257,6 +282,7 @@ public class BrokerStartup {
         System.setProperty("rocketmq.namesrv.domain.subgroup", rmqAddressServerSubGroup);
     }
 
+    // note mqbroker 命令选项的含义
     private static Options buildCommandlineOptions(final Options options) {
         Option opt = new Option("c", "configFile", true, "Broker config properties file");
         opt.setRequired(false);

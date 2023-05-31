@@ -102,8 +102,8 @@ public abstract class NettyRemotingAbstract {
     protected final NettyEventExecutor nettyEventExecutor = new NettyEventExecutor();
 
     /**
-     * The default request processor to use in case there is no exact match in {@link #processorTable} per request
-     * code.
+     * The default request processor to use
+     * in case there is no exact match in {@link #processorTable} per request code.
      */
     protected Pair<NettyRequestProcessor, ExecutorService> defaultRequestProcessorPair;
 
@@ -166,9 +166,11 @@ public abstract class NettyRemotingAbstract {
     public void processMessageReceived(ChannelHandlerContext ctx, RemotingCommand msg) {
         if (msg != null) {
             switch (msg.getType()) {
+                // note 请求
                 case REQUEST_COMMAND:
                     processRequestCommand(ctx, msg);
                     break;
+                // note 响应
                 case RESPONSE_COMMAND:
                     processResponseCommand(ctx, msg);
                     break;
@@ -215,15 +217,20 @@ public abstract class NettyRemotingAbstract {
         response.setOpaque(request.getOpaque());
         response.markResponseType();
         try {
+
+            // note 写数据
             channel.writeAndFlush(response).addListener((ChannelFutureListener) future -> {
+                // note 写成功
                 if (future.isSuccess()) {
                     log.debug("Response[request code: {}, response code: {}, opaque: {}] is written to channel{}",
                         request.getCode(), response.getCode(), response.getOpaque(), channel);
                 } else {
+                    // note 写失败
                     log.error("Failed to write response[request code: {}, response code: {}, opaque: {}] to channel{}",
                         request.getCode(), response.getCode(), response.getOpaque(), channel, future.cause());
                 }
                 attributesBuilder.put(LABEL_RESULT, RemotingMetricsManager.getWriteAndFlushResult(future));
+                // todo opentelemetry.api.metrics.LongHistogram
                 RemotingMetricsManager.rpcLatency.record(request.getProcessTimer().elapsed(TimeUnit.MILLISECONDS), attributesBuilder.build());
                 if (callback != null) {
                     callback.accept(future);
@@ -246,7 +253,13 @@ public abstract class NettyRemotingAbstract {
      */
     public void processRequestCommand(final ChannelHandlerContext ctx, final RemotingCommand cmd) {
         final Pair<NettyRequestProcessor, ExecutorService> matched = this.processorTable.get(cmd.getCode());
-        final Pair<NettyRequestProcessor, ExecutorService> pair = null == matched ? this.defaultRequestProcessorPair : matched;
+
+        // note 通过 RemotingCommand 的 code 指定 NettyRequestProcessor
+        final Pair<NettyRequestProcessor, ExecutorService> pair =
+                null == matched
+                        ? this.defaultRequestProcessorPair
+                        : matched;
+
         final int opaque = cmd.getOpaque();
 
         if (pair == null) {
@@ -259,16 +272,19 @@ public abstract class NettyRemotingAbstract {
             return;
         }
 
-        Runnable run = buildProcessRequestHandler(ctx, cmd, pair, opaque);
-
+        // note 获取 NettyRequestProcessor
         if (pair.getObject1().rejectRequest()) {
-            final RemotingCommand response = RemotingCommand.createResponseCommand(RemotingSysResponseCode.SYSTEM_BUSY,
-                "[REJECTREQUEST]system busy, start flow control for a while");
+            final RemotingCommand response = RemotingCommand.createResponseCommand(
+                    RemotingSysResponseCode.SYSTEM_BUSY,
+                    "[REJECTREQUEST]system busy, start flow control for a while"
+            );
             response.setOpaque(opaque);
             writeResponse(ctx.channel(), cmd, response);
             return;
         }
 
+        // note
+        Runnable run = buildProcessRequestHandler(ctx, cmd, pair, opaque);
         try {
             final RequestTask requestTask = new RequestTask(run, ctx.channel(), cmd);
             //async execute task, current thread return directly
@@ -296,9 +312,9 @@ public abstract class NettyRemotingAbstract {
     private Runnable buildProcessRequestHandler(ChannelHandlerContext ctx, RemotingCommand cmd,
         Pair<NettyRequestProcessor, ExecutorService> pair, int opaque) {
         return () -> {
+
             Exception exception = null;
             RemotingCommand response;
-
             try {
                 String remoteAddr = RemotingHelper.parseChannelRemoteAddr(ctx.channel());
                 try {
@@ -310,6 +326,7 @@ public abstract class NettyRemotingAbstract {
                 }
 
                 if (exception == null) {
+                    // note 此处将数据落盘，并构造响应对象
                     response = pair.getObject1().processRequest(ctx, cmd);
                 } else {
                     response = RemotingCommand.createResponseCommand(RemotingSysResponseCode.SYSTEM_ERROR, null);
@@ -327,6 +344,7 @@ public abstract class NettyRemotingAbstract {
                     throw exception;
                 }
 
+                // note 将响应对象返回给客户端
                 writeResponse(ctx.channel(), cmd, response);
             } catch (AbortProcessException e) {
                 response = RemotingCommand.createResponseCommand(e.getResponseCode(), e.getErrorMessage());

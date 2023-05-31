@@ -41,6 +41,9 @@ import org.apache.rocketmq.remoting.CommandCustomHeader;
 import org.apache.rocketmq.remoting.annotation.CFNotNull;
 import org.apache.rocketmq.remoting.exception.RemotingCommandException;
 
+/**
+ * 理解为消息类型及其他信息
+ */
 public class RemotingCommand {
     public static final String SERIALIZE_TYPE_PROPERTY = "rocketmq.serialize.type";
     public static final String SERIALIZE_TYPE_ENV = "ROCKETMQ_SERIALIZE_TYPE";
@@ -79,17 +82,24 @@ public class RemotingCommand {
         }
     }
 
+    // note SEND_REPLY_MESSAGE_V2 = 325
+    //      RequestCode.SEND_REPLY_MESSAGE
+    //      RequestCode.SEND_MESSAGE
     private int code;
     private LanguageCode language = LanguageCode.JAVA;
     private int version = 0;
     private int opaque = requestId.getAndIncrement();
     private int flag = 0;
     private String remark;
+    // note 扩展字段
     private HashMap<String, String> extFields;
+    // note 自定义的头文件
+    // fixme 看下发送消息的时候是怎么设置值的
     private transient CommandCustomHeader customHeader;
 
     private SerializeType serializeTypeCurrentRPC = serializeTypeConfigInThisServer;
 
+    // note 保存数据
     private transient byte[] body;
     private boolean suspended;
     private Stopwatch processTimer;
@@ -118,6 +128,7 @@ public class RemotingCommand {
         if (configVersion >= 0) {
             cmd.setVersion(configVersion);
         } else {
+            // 当前系统版本
             String v = System.getProperty(REMOTING_VERSION_KEY);
             if (v != null) {
                 int value = Integer.parseInt(v);
@@ -143,8 +154,7 @@ public class RemotingCommand {
         return buildErrorResponse(code, remark, null);
     }
 
-    public static RemotingCommand createResponseCommand(int code, String remark,
-        Class<? extends CommandCustomHeader> classHeader) {
+    public static RemotingCommand createResponseCommand(int code, String remark, Class<? extends CommandCustomHeader> classHeader) {
         RemotingCommand cmd = new RemotingCommand();
         cmd.markResponseType();
         cmd.setCode(code);
@@ -244,7 +254,10 @@ public class RemotingCommand {
     }
 
     public void markResponseType() {
+        // bits is 10
         int bits = 1 << RPC_TYPE;
+        // | 是有 1 得 1
+        // flag = flag | 10，留下 flag的第二位，2或者0
         this.flag |= bits;
     }
 
@@ -256,23 +269,18 @@ public class RemotingCommand {
         this.customHeader = customHeader;
     }
 
-    public CommandCustomHeader decodeCommandCustomHeader(
-        Class<? extends CommandCustomHeader> classHeader) throws RemotingCommandException {
+    public CommandCustomHeader decodeCommandCustomHeader(Class<? extends CommandCustomHeader> classHeader) throws RemotingCommandException {
         return decodeCommandCustomHeader(classHeader, true);
     }
 
-    public CommandCustomHeader decodeCommandCustomHeader(Class<? extends CommandCustomHeader> classHeader,
-        boolean useFastEncode) throws RemotingCommandException {
+    public CommandCustomHeader decodeCommandCustomHeader(Class<? extends CommandCustomHeader> classHeader, // header 类型
+                                                         boolean useFastEncode) // 默认为true
+            throws RemotingCommandException {
+
         CommandCustomHeader objectHeader;
         try {
             objectHeader = classHeader.getDeclaredConstructor().newInstance();
-        } catch (InstantiationException e) {
-            return null;
-        } catch (IllegalAccessException e) {
-            return null;
-        } catch (InvocationTargetException e) {
-            return null;
-        } catch (NoSuchMethodException e) {
+        } catch (InstantiationException | IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
             return null;
         }
 
@@ -506,6 +514,9 @@ public class RemotingCommand {
         return (this.flag & bits) == bits;
     }
 
+    // note SEND_REPLY_MESSAGE_V2 = 325
+    //      RequestCode.SEND_REPLY_MESSAGE
+    //      RequestCode.SEND_MESSAGE
     public int getCode() {
         return code;
     }
@@ -525,6 +536,7 @@ public class RemotingCommand {
 
     @JSONField(serialize = false)
     public boolean isResponseType() {
+        // 1 是 responseType
         int bits = 1 << RPC_TYPE;
         return (this.flag & bits) == bits;
     }

@@ -23,11 +23,15 @@ import org.apache.rocketmq.common.message.MessageRequestMode;
 import org.apache.rocketmq.common.topic.TopicValidator;
 import org.apache.rocketmq.common.utils.NetworkUtil;
 
+/**
+ * broker 配置
+ */
 public class BrokerConfig extends BrokerIdentity {
 
     private String brokerConfigPath = null;
 
     private String rocketmqHome = System.getProperty(MixAll.ROCKETMQ_HOME_PROPERTY, System.getenv(MixAll.ROCKETMQ_HOME_ENV));
+
     @ImportantField
     private String namesrvAddr = System.getProperty(MixAll.NAMESRV_ADDR_PROPERTY, System.getenv(MixAll.NAMESRV_ADDR_ENV));
 
@@ -44,7 +48,9 @@ public class BrokerConfig extends BrokerIdentity {
     @ImportantField
     private boolean recoverConcurrently = false;
 
+    // 100
     private int brokerPermission = PermName.PERM_READ | PermName.PERM_WRITE;
+
     private int defaultTopicQueueNums = 8;
     @ImportantField
     private boolean autoCreateTopicEnable = true;
@@ -54,6 +60,7 @@ public class BrokerConfig extends BrokerIdentity {
     private boolean brokerTopicEnable = true;
     @ImportantField
     private boolean autoCreateSubscriptionGroup = true;
+
     private String messageStorePlugIn = "";
 
     private static final int PROCESSOR_NUMBER = Runtime.getRuntime().availableProcessors();
@@ -320,6 +327,8 @@ public class BrokerConfig extends BrokerIdentity {
 
     /**
      * Is startup controller mode, which support auto switch broker's role.
+     *
+     * note "自动支持切换broker角色"
      */
     private boolean enableControllerMode = false;
 
@@ -1313,6 +1322,7 @@ public class BrokerConfig extends BrokerIdentity {
         return asyncSendEnable;
     }
 
+    // 应该是服务启动是根据配置文件反射赋值的
     public void setAsyncSendEnable(boolean asyncSendEnable) {
         this.asyncSendEnable = asyncSendEnable;
     }

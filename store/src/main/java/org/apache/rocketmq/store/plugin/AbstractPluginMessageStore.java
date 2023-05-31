@@ -62,7 +62,15 @@ import org.apache.rocketmq.store.stats.BrokerStatsManager;
 import org.apache.rocketmq.store.timer.TimerMessageStore;
 import org.apache.rocketmq.store.util.PerfCounter;
 
+// "插件类需要继承抽闲类AbstractPluginMessageStore，该类实现了MessageStore接口，
+// DefaultMessageStore也实现了MessageStore接口，当存储消息时，rocketmq将多个插件按照配置依次调用，
+// 最后调用DefaultMessageStore将消息存储到文件，因此插件提供了一种在消息存储前后修改数据的功能。
+//————————————————
+//版权声明：本文为CSDN博主「龚厂长」的原创文章，遵循CC 4.0 BY-SA版权协议，转载请附上原文出处链接及本声明。
+//原文链接：https://blog.csdn.net/weixin_38308374/article/details/110742717"
 public abstract class AbstractPluginMessageStore implements MessageStore {
+
+    // note 下一次调用的 MessageStore
     protected MessageStore next = null;
     protected MessageStorePluginContext context;
 
@@ -312,6 +320,7 @@ public abstract class AbstractPluginMessageStore implements MessageStore {
         next.setConfirmOffset(phyOffset);
     }
 
+    // note 这样调用到的还是最后一个，没办法聚合所有的list
     @Override
     public LinkedList<CommitLogDispatcher> getDispatcherList() {
         return next.getDispatcherList();

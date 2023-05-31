@@ -22,16 +22,25 @@ import java.lang.reflect.Constructor;
 import org.apache.rocketmq.store.MessageStore;
 
 public final class MessageStoreFactory {
-    public static MessageStore build(MessageStorePluginContext context,
-        MessageStore messageStore) throws IOException {
+
+    // note 相当于构造了一个 ChainMessageStore，而且入参数message是最后一个被调用的
+    public static MessageStore build(MessageStorePluginContext context, MessageStore messageStore) throws IOException {
+
         String plugin = context.getBrokerConfig().getMessageStorePlugIn();
+
         if (plugin != null && plugin.trim().length() != 0) {
+
+            // note 消息的数量
             String[] pluginClasses = plugin.split(",");
+
+            // 从后向前
             for (int i = pluginClasses.length - 1; i >= 0; --i) {
                 String pluginClass = pluginClasses[i];
                 try {
+                    // note 获取插件类信息
                     @SuppressWarnings("unchecked")
                     Class<AbstractPluginMessageStore> clazz = (Class<AbstractPluginMessageStore>) Class.forName(pluginClass);
+
                     Constructor<AbstractPluginMessageStore> construct = clazz.getConstructor(MessageStorePluginContext.class, MessageStore.class);
                     AbstractPluginMessageStore pluginMessageStore = construct.newInstance(context, messageStore);
                     messageStore = pluginMessageStore;

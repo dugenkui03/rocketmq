@@ -116,6 +116,7 @@ public class DefaultMessageStore implements MessageStore {
     public final PerfCounter.Ticks perfs = new PerfCounter.Ticks(LOGGER);
 
     private final MessageStoreConfig messageStoreConfig;
+
     // CommitLog
     private final CommitLog commitLog;
 
@@ -157,6 +158,8 @@ public class DefaultMessageStore implements MessageStore {
     private volatile boolean shutdown = true;
 
     private StoreCheckpoint storeCheckpoint;
+
+    // note 定时消息 MessageStore
     private TimerMessageStore timerMessageStore;
 
     private final LinkedList<CommitLogDispatcher> dispatcherList;
@@ -380,6 +383,7 @@ public class DefaultMessageStore implements MessageStore {
         lockFile.getChannel().write(ByteBuffer.wrap("lock".getBytes(StandardCharsets.UTF_8)));
         lockFile.getChannel().force(true);
 
+        // note
         this.reputMessageService.setReputFromOffset(this.commitLog.getConfirmOffset());
         this.reputMessageService.start();
 
@@ -542,9 +546,10 @@ public class DefaultMessageStore implements MessageStore {
         this.consumeQueueStore.destroy();
     }
 
+    // note 重要
     @Override
     public CompletableFuture<PutMessageResult> asyncPutMessage(MessageExtBrokerInner msg) {
-
+        // 落盘前前置动作
         for (PutMessageHook putMessageHook : putMessageHookList) {
             PutMessageResult handleResult = putMessageHook.executeBeforePutMessage(msg);
             if (handleResult != null) {
@@ -552,7 +557,8 @@ public class DefaultMessageStore implements MessageStore {
             }
         }
 
-        if (msg.getProperties().containsKey(MessageConst.PROPERTY_INNER_NUM)
+
+        if (msg.getProperties().containsKey(MessageConst.PROPERTY_INNER_NUM) // INNER_NUM 属性
             && !MessageSysFlag.check(msg.getSysFlag(), MessageSysFlag.INNER_BATCH_FLAG)) {
             LOGGER.warn("[BUG]The message had property {} but is not an inner batch", MessageConst.PROPERTY_INNER_NUM);
             return CompletableFuture.completedFuture(new PutMessageResult(PutMessageStatus.MESSAGE_ILLEGAL, null));
@@ -567,16 +573,21 @@ public class DefaultMessageStore implements MessageStore {
         }
 
         long beginTime = this.getSystemClock().now();
+
+        // note 重要
         CompletableFuture<PutMessageResult> putResultFuture = this.commitLog.asyncPutMessage(msg);
 
+        // note 任务结束则立即使用当前线程执行该回调动做
         putResultFuture.thenAccept(result -> {
+            // note 该动作不是在主线程，而是 putResultFuture 中指定的线程执行
             long elapsedTime = this.getSystemClock().now() - beginTime;
             if (elapsedTime > 500) {
                 LOGGER.warn("DefaultMessageStore#putMessage: CommitLog#putMessage cost {}ms, topic={}, bodyLength={}",
                     elapsedTime, msg.getTopic(), msg.getBody().length);
             }
-            this.storeStatsService.setPutMessageEntireTimeMax(elapsedTime);
 
+            // note 状态统计
+            this.storeStatsService.setPutMessageEntireTimeMax(elapsedTime);
             if (null == result || !result.isOk()) {
                 this.storeStatsService.getPutMessageFailedTimes().add(1);
             }
@@ -615,7 +626,8 @@ public class DefaultMessageStore implements MessageStore {
 
     @Override
     public PutMessageResult putMessage(MessageExtBrokerInner msg) {
-        return waitForPutResult(asyncPutMessage(msg));
+        CompletableFuture<PutMessageResult> asyncPutMessage = asyncPutMessage(msg);
+        return waitForPutResult(asyncPutMessage);
     }
 
     @Override
@@ -626,8 +638,10 @@ public class DefaultMessageStore implements MessageStore {
     private PutMessageResult waitForPutResult(CompletableFuture<PutMessageResult> putMessageResultFuture) {
         try {
             int putMessageTimeout =
-                Math.max(this.messageStoreConfig.getSyncFlushTimeout(),
-                    this.messageStoreConfig.getSlaveTimeout()) + 5000;
+                    Math.max(
+                            this.messageStoreConfig.getSyncFlushTimeout(),
+                            this.messageStoreConfig.getSlaveTimeout()
+                    ) + 5000;
             return putMessageResultFuture.get(putMessageTimeout, TimeUnit.MILLISECONDS);
         } catch (ExecutionException | InterruptedException e) {
             return new PutMessageResult(PutMessageStatus.UNKNOWN_ERROR, null);
@@ -899,8 +913,10 @@ public class DefaultMessageStore implements MessageStore {
                 }
 
                 long diff = maxOffsetPy - maxPhyOffsetPulling;
-                long memory = (long) (StoreUtil.TOTAL_PHYSICAL_MEMORY_SIZE
-                    * (this.messageStoreConfig.getAccessMessageInMemoryMaxRatio() / 100.0));
+
+                // 设定的啥最大阈值 accessMessageInMemoryMaxRatio
+                long memory = (long) (StoreUtil.TOTAL_PHYSICAL_MEMORY_SIZE * (this.messageStoreConfig.getAccessMessageInMemoryMaxRatio() / 100.0));
+
                 getResult.setSuggestPullingFromSlave(diff > memory);
             }
         } else {
@@ -2692,6 +2708,7 @@ public class DefaultMessageStore implements MessageStore {
 
     }
 
+    // note ReputMessageService 从 commit log 中读取数据并构建 Consumer 和 IndexFile 文件
     class ReputMessageService extends ServiceThread {
 
         protected volatile long reputFromOffset = 0;
@@ -2733,12 +2750,15 @@ public class DefaultMessageStore implements MessageStore {
             return this.reputFromOffset < DefaultMessageStore.this.getConfirmOffset();
         }
 
+        // note ？构建 ConsumerQueue 和 IndexFile 文件？
         public void doReput() {
             if (this.reputFromOffset < DefaultMessageStore.this.commitLog.getMinOffset()) {
                 LOGGER.warn("The reputFromOffset={} is smaller than minPyOffset={}, this usually indicate that the dispatch behind too much and the commitlog has expired.",
                     this.reputFromOffset, DefaultMessageStore.this.commitLog.getMinOffset());
                 this.reputFromOffset = DefaultMessageStore.this.commitLog.getMinOffset();
             }
+
+
             for (boolean doNext = true; this.isCommitLogAvailable() && doNext; ) {
 
                 SelectMappedBufferResult result = DefaultMessageStore.this.commitLog.getData(reputFromOffset);
@@ -2997,6 +3017,7 @@ public class DefaultMessageStore implements MessageStore {
         }
     }
 
+    // note ?会不会把数据顺序搞乱?
     class ConcurrentReputMessageService extends ReputMessageService {
 
         private static final int BATCH_SIZE = 1024 * 1024 * 4;
@@ -3085,6 +3106,7 @@ public class DefaultMessageStore implements MessageStore {
                         try {
                             TimeUnit.MILLISECONDS.sleep(1);
                         } catch (Exception e) {
+                            // note log
                             e.printStackTrace();
                         }
                         over = mappedPageHoldCount.get() == 0;

@@ -51,6 +51,7 @@ public class TopicQueueMappingManager extends ConfigManager {
     private final DataVersion dataVersion = new DataVersion();
     private transient BrokerController brokerController;
 
+    // note 保存的状态 <topic, queue>
     private final ConcurrentMap<String, TopicQueueMappingDetail> topicQueueMappingTable = new ConcurrentHashMap<>();
 
 
@@ -189,8 +190,7 @@ public class TopicQueueMappingManager extends ConfigManager {
     //Do not return a null context
     public TopicQueueMappingContext buildTopicQueueMappingContext(TopicRequestHeader requestHeader, boolean selectOneWhenMiss) {
         // if lo is set to false explicitly, it maybe the forwarded request
-        if (requestHeader.getLo() != null
-                && Boolean.FALSE.equals(requestHeader.getLo())) {
+        if (requestHeader.getLo() != null && Boolean.FALSE.equals(requestHeader.getLo())) {
             return new TopicQueueMappingContext(requestHeader.getTopic(), null, null, null, null);
         }
         String topic = requestHeader.getTopic();
@@ -238,6 +238,7 @@ public class TopicQueueMappingManager extends ConfigManager {
     }
 
 
+    // note https://github.com/apache/rocketmq/blob/develop/docs/cn/statictopic/RocketMQ_Static_Topic_Logic_Queue_%E8%AE%BE%E8%AE%A1.md
     public  RemotingCommand rewriteRequestForStaticTopic(TopicQueueRequestHeader requestHeader, TopicQueueMappingContext mappingContext) {
         try {
             if (mappingContext.getMappingDetail() == null) {
@@ -248,6 +249,7 @@ public class TopicQueueMappingManager extends ConfigManager {
                 return buildErrorResponse(ResponseCode.NOT_LEADER_FOR_QUEUE, String.format("%s-%d does not exit in request process of current broker %s", requestHeader.getTopic(), requestHeader.getQueueId(), mappingDetail.getBname()));
             }
             LogicQueueMappingItem mappingItem = mappingContext.getLeaderItem();
+            // note 保存lead节点的 queueId?
             requestHeader.setQueueId(mappingItem.getQueueId());
             return null;
         } catch (Throwable t) {
